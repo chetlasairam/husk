@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "268049335778",
+    "project_id": "huskkk-afbcb",
+    "storage_bucket": "huskkk-afbcb.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:268049335778:android:8ea3610bd1b0e2e98d25bb",
+        "android_client_info": {
+          "package_name": "com.example.huskkk"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "268049335778-fqu6gm0sp6htqpliibk3qqt1a1pkipel.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBjd8qT6-ynzVrb04vDC-DmRu2__acFu5o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "268049335778-fqu6gm0sp6htqpliibk3qqt1a1pkipel.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
