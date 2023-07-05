@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'globals.dart' as globals;
 
+///Use zego
+
 class VideoCall extends StatefulWidget {
   @override
   State<VideoCall> createState() => _VideoCallState();

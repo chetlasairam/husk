@@ -1,3 +1,4 @@
+import 'package:flutter/scheduler.dart';
 import 'package:huskkk/chatBox.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:huskkk/methods.dart';
@@ -8,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'globals.dart' as globals;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:contacts_service/contacts_service.dart';
+import 'package:intl/intl.dart';
 
 Future<String> getContactNameFromNumber(String phoneNumber) async {
   final Iterable<Contact> contacts = await ContactsService.getContacts();
@@ -81,34 +83,62 @@ class _HomePageState extends State<HomePage> {
                         globals.statusBarHeight,
                     width: globals.screenWidth,
                     //color: Colors.red,
-                    child: StreamBuilder<QuerySnapshot>(
+                    child: StreamBuilder(
                       stream: FirebaseFirestore.instance
                           .collection('chats')
                           .doc(myNum)
                           .collection('messages')
+                          .orderBy('timestamp', descending: true)
                           .snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasData) {
+                      builder: (context, AsyncSnapshot snapshot) {
+                        if (snapshot.hasData && snapshot.data != null) {
                           final documents = snapshot.data?.docs;
+                          print('Total documents: ${documents?.length}');
 
-                          return SingleChildScrollView(
-                            child: Column(
-                              children: documents?.map((doc) {
-                                    final docId = doc.id;
+                          return ListView.builder(
+                              itemCount: snapshot.data.docs.length,
+                              itemBuilder: (context, index) {
+                                var docId = snapshot.data.docs[index].id;
+                                var lastMsg =
+                                    snapshot.data.docs[index]['last_msg'];
+                                var lastMsgTime =
+                                    snapshot.data.docs[index]['timestamp'];
+                                if (lastMsgTime != null) {}
+                                Timestamp timestamp = lastMsgTime;
+                                DateTime dateTime = timestamp.toDate();
+                                DateFormat formatter = DateFormat('HH:mm');
+                                String formattedTime =
+                                    formatter.format(dateTime);
+                                print("MESSAGE TIME:" + lastMsgTime.toString());
+                                return ChatCard(
+                                  phoneNumber: docId,
+                                  lastMsg: lastMsg,
+                                  lastMsgTime: formattedTime,
+                                );
+                              });
+                          // SingleChildScrollView(
+                          //   child: Column(
+                          //     children: documents?.map((doc) {
+                          //           final docId = doc.id;
 
-                                    return ChatCard(
-                                        phoneNumber:
-                                            docId); // Replace with your desired widget
+                          //           final lastMsg = doc['lastmsg'];
+                          //           final timestamp = doc['timestamp'];
 
-                                    // You can also use ListTile for a more comprehensive display
-                                    // return ListTile(
-                                    //   title: Text(docId),
-                                    //   // Add other properties or widgets as needed
-                                    // );
-                                  }).toList() ??
-                                  [],
-                            ),
-                          );
+                          //           return ChatCard(
+                          //             phoneNumber: docId,
+                          //             lastMsg: lastMsg,
+                          //             lastMsgTime: timestamp,
+                          //           ); // Replace with your desired widget
+
+                          //           // You can also use ListTile for a more comprehensive display
+                          //           // return ListTile(
+                          //           //   title: Text(docId),
+                          //           //   // Add other properties or widgets as needed
+                          //           // );
+                          //         }).toList() ??
+                          //         [],
+                          //   ),
+                          // );
                         } else if (snapshot.hasError) {
                           return Text('Error: ${snapshot.error}');
                         } else {
@@ -187,10 +217,14 @@ class _HomePageState extends State<HomePage> {
 class ChatCard extends StatefulWidget {
   // final String name;
   final String phoneNumber;
+  final String lastMsg;
+  final String lastMsgTime;
 
   const ChatCard({
     // required this.name,
     required this.phoneNumber,
+    required this.lastMsg,
+    required this.lastMsgTime,
   });
   @override
   State<ChatCard> createState() => _ChatCardState();
@@ -208,7 +242,11 @@ class _ChatCardState extends State<ChatCard> {
   Future<void> _loadContactName() async {
     final contactName = await getContactNameFromNumber(widget.phoneNumber);
     setState(() {
-      _contactName = contactName;
+      if (contactName == "") {
+        _contactName = widget.phoneNumber;
+      } else {
+        _contactName = contactName;
+      }
     });
   }
 
@@ -282,7 +320,7 @@ class _ChatCardState extends State<ChatCard> {
                               height: 1,
                             )),
                             Text(
-                              "Thanks for inviting me",
+                              widget.lastMsg,
                               style: TextStyle(
                                   fontSize: globals.generalize(10),
                                   color: Colors.grey[600],
@@ -298,7 +336,7 @@ class _ChatCardState extends State<ChatCard> {
                     Padding(
                       padding: EdgeInsets.all(globals.generalize(18)),
                       child: Text(
-                        "10:23",
+                        widget.lastMsgTime,
                         style: TextStyle(
                             fontSize: globals.generalize(10),
                             color: Colors.grey[600],

@@ -67,7 +67,11 @@ class _ChatBoxState extends State<ChatBox> {
   Future<void> _loadContactName() async {
     final contactName = await getContactNameFromNumber(widget.friendNum);
     setState(() {
-      _contactName = contactName;
+      if (contactName == "") {
+        _contactName = widget.friendNum;
+      } else {
+        _contactName = contactName;
+      }
     });
   }
 
@@ -365,6 +369,8 @@ class _ChatBoxState extends State<ChatBox> {
                                           .doc(friendNum)
                                           .set({
                                         'last_msg': message,
+                                        'timestamp':
+                                            FieldValue.serverTimestamp(),
                                       });
                                     });
 
@@ -386,7 +392,11 @@ class _ChatBoxState extends State<ChatBox> {
                                           .doc(friendNum)
                                           .collection('messages')
                                           .doc(myNum)
-                                          .set({"last_msg": message});
+                                          .set({
+                                        "last_msg": message,
+                                        'timestamp':
+                                            FieldValue.serverTimestamp(),
+                                      });
                                     }).then((_) {
                                       setState(() {
                                         sendMessage(message);

@@ -9,23 +9,21 @@ import 'package:flutter/material.dart';
 // import 'audioCallPage.dart';
 // import 'signInPage.dart';
 // import 'signUp.dart';
-import 'homePage.dart';
+// import 'homePage.dart';
 // import 'chatBox.dart';
 // import 'videoCallPage.dart';
-// import 'videochatCallPage.dart';
+import 'videochatCallPage.dart';
 // import 'receiverDetailsPage.dart';
 // import 'searchPage.dart';
 // import 'settingspage.dart';
 // import 'test.dart';
 
 Future main() async {
-    WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   //SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values());
   runApp(MyApp());
 }
-
-
 
 class MyApp extends StatelessWidget {
   @override
@@ -41,17 +39,17 @@ class MyApp extends StatelessWidget {
       //home: SignInPage(),
       //home: Pattern(),
       //home: SignUp(),
-      //home: AudioCall(),
-      home: HomePage(),
+      // home: AudioCall(),
+      // home: HomePage(),
       //home: ChatBox(),
       //home: TextBox(),
       //home: Trash2(),
       //home: ReceiverDetails(),
-      //home: VideoCall(),
-      //home: VideoChatCall()
+      // home: VideoCall(),
+      // home: VideoChatCall()
       //home: Search()
       //home: Settings(),
-      //home: VideoChatCall(),
+      home: const VideoChatCall(myNum: "8309358983", friendNum: "8309358986"),
       //home: tr1(),
       //home: Pattern(),
     );

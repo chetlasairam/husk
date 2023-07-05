@@ -111,7 +111,7 @@ class _SearchState extends State<Search> {
         ],
       );
     } else if (_contacts == null) {
-      return Container(
+      return const SizedBox(
         height: 100,
         width: 100,
         child: CircularProgressIndicator(),

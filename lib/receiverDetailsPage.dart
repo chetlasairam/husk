@@ -153,7 +153,9 @@ class _PatchState extends State<Patch> {
                                   Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                          builder: (_) => VideoChatCall()));
+                                          builder: (_) => VideoChatCall(
+                                              myNum: "8309358983",
+                                              friendNum: "8309358981")));
                                 },
                                 child: Icon(
                                   Icons.video_camera_back,
