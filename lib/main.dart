@@ -17,6 +17,7 @@ import 'videochatCallPage.dart';
 // import 'searchPage.dart';
 // import 'settingspage.dart';
 // import 'test.dart';
+// import 'callInvitation.dart';
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +53,7 @@ class MyApp extends StatelessWidget {
       home: const VideoChatCall(myNum: "8309358983", friendNum: "8309358986"),
       //home: tr1(),
       //home: Pattern(),
+      // home: CallInvite(),
     );
   }
 }

@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+import 'package:flutter/material.dart';
 import 'package:huskkk/constants.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -41,8 +42,6 @@ class _VideoChatCallState extends State<VideoChatCall> {
   bool _isMuted = false; // Track microphone mute state
   bool _isFrontCamera = true; // Track camera position
   bool _isCameraOff = false; // Track camera off state
-  bool _isSpeakerOn = true; // Track speaker on state
-
   late RtcEngine _engine;
   @override
   void initState() {
@@ -128,13 +127,6 @@ class _VideoChatCallState extends State<VideoChatCall> {
     });
   }
 
-  void toggleSpeaker() {
-    setState(() {
-      _isSpeakerOn = !_isSpeakerOn;
-      _engine.setEnableSpeakerphone(_isSpeakerOn);
-    });
-  }
-
   void sendMessage(String message) async {
     if (mounted) {
       setState(() {
@@ -161,12 +153,11 @@ class _VideoChatCallState extends State<VideoChatCall> {
         children: [
           SingleChildScrollView(
               child: Visibility(visible: !decision, child: video())),
-          // child: video()),
-          // Visibility(
-          //   visible: !decision,
-          //   child: Opacity(opacity: 0.6, child: chats()),
-          // ),
-          // buttons(),
+          Visibility(
+            visible: !decision,
+            child: Opacity(opacity: 0.6, child: chats()),
+          ),
+          buttons(),
         ],
       )),
     );
@@ -381,7 +372,6 @@ class _VideoChatCallState extends State<VideoChatCall> {
                             onPressed: () {
                               setState(() {
                                 speaker = !speaker;
-                                toggleSpeaker();
                               });
                             },
                             child: Icon(
@@ -420,7 +410,6 @@ class _VideoChatCallState extends State<VideoChatCall> {
                             onPressed: () {
                               setState(() {
                                 mute = !mute;
-                                toggleMute();
                               });
                             },
                             child: Icon(
@@ -458,45 +447,7 @@ class _VideoChatCallState extends State<VideoChatCall> {
                             //style: ElevatedButton.styleFrom({}),
                             onPressed: () {
                               setState(() {
-                                _isFrontCamera = !_isFrontCamera;
-                                toggleCamera();
-                              });
-                            },
-                            child: Icon(
-                              Icons.flip_camera_ios_outlined,
-                              color: Colors.grey,
-                              size: globals.generalize(20),
-                            ),
-                            style: ButtonStyle(
-                              backgroundColor:
-                                  MaterialStateProperty.resolveWith<Color>(
-                                (Set<MaterialState> states) {
-                                  return Colors.white;
-                                },
-                              ),
-                              elevation: MaterialStateProperty.all<double>(3),
-                              shadowColor: MaterialStateProperty.all<Color>(
-                                  Colors.white),
-                              shape: MaterialStateProperty.all<
-                                  RoundedRectangleBorder>(
-                                RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(50.0),
-                                ),
-                              ),
-                            )),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.only(top: globals.generalize(4)),
-                      child: SizedBox(
-                        width: globals.generalize(45),
-                        height: globals.generalize(45),
-                        child: ElevatedButton(
-                            //style: ElevatedButton.styleFrom({}),
-                            onPressed: () {
-                              setState(() {
                                 camOnOff = !camOnOff;
-                                toggleCameraOff();
                               });
                             },
                             child: Icon(
@@ -536,7 +487,6 @@ class _VideoChatCallState extends State<VideoChatCall> {
                               setState(() {
                                 decision = true;
                                 //control = false;
-                                endCall();
                               });
                             },
                             child: Icon(
@@ -866,56 +816,33 @@ class _VideoChatCallState extends State<VideoChatCall> {
 
   Widget video() {
     ///friend Screen Container
-    return Stack(
-      children: [
-        Center(
-          child: _remoteVideo(),
-        ),
-        Align(
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: 100,
-            height: 150,
-            child: Center(
-              child: _localVideo(),
-            ),
-          ),
-        ),
-      ],
+    return Container(
+      height: globals.screenHeight - globals.statusBarHeight,
+      width: globals.screenWidth,
+      //color: Colors.purple,
+      alignment: Alignment.topLeft,
+      decoration: new BoxDecoration(
+          //border: Border.all(color: Colors.white, width: 3),
+          //shape: BoxShape.circle,
+          image: new DecorationImage(
+              fit: BoxFit.fill,
+              image: NetworkImage(
+                  "https://images.unsplash.com/photo-1581562444313-98be7b621dc2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MjB8fGRvZyUyMHBvcnRyYWl0fGVufDB8fDB8fHww&w=1000&q=80"))),
+
+      ///My screen container
+      child: Container(
+        width: 100,
+        height: 140,
+        decoration: new BoxDecoration(
+            //border: Border.all(color: Colors.white, width: 3),
+            //shape: BoxShape.circle,
+            color: Colors.yellow,
+            image: new DecorationImage(
+                fit: BoxFit.fill,
+                image: NetworkImage(
+                    "https://images.unsplash.com/photo-1543055484-ac8fe612bf31?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8Y2F0JTIwcG9ydHJhaXR8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=600&q=60"))),
+      ),
     );
-  }
-
-  Widget _remoteVideo() {
-    if (_remoteUid != null) {
-      return AgoraVideoView(
-        controller: VideoViewController.remote(
-          rtcEngine: _engine,
-          canvas: VideoCanvas(uid: _remoteUid),
-          connection: const RtcConnection(channelId: channel),
-        ),
-      );
-    } else {
-      return const Text(
-        'Please wait for remote user to join',
-        textAlign: TextAlign.center,
-      );
-    }
-  }
-
-  Widget _localVideo() {
-    if (_localUserJoined) {
-      return AgoraVideoView(
-        controller: VideoViewController(
-          rtcEngine: _engine,
-          canvas: const VideoCanvas(uid: 0),
-        ),
-      );
-    } else {
-      return const Text(
-        'LV Loading',
-        textAlign: TextAlign.center,
-      );
-    }
   }
 }
 

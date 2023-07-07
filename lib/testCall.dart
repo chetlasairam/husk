@@ -22,6 +22,7 @@ class _CallState extends State<Call> {
   bool _isMuted = false; // Track microphone mute state
   bool _isFrontCamera = true; // Track camera position
   bool _isCameraOff = false; // Track camera off state
+  bool _isSpeakerOn = true; // Track speaker on state
   late RtcEngine _engine;
 
   @override
@@ -108,9 +109,17 @@ class _CallState extends State<Call> {
     });
   }
 
+  void toggleSpeaker() {
+    setState(() {
+      _isSpeakerOn = !_isSpeakerOn;
+      _engine.setEnableSpeakerphone(_isSpeakerOn);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.greenAccent,
       appBar: AppBar(
         title: const Text('Agora Video Call'),
         actions: [
@@ -123,12 +132,16 @@ class _CallState extends State<Call> {
             onPressed: toggleMute,
           ),
           IconButton(
-            icon: Icon(_isFrontCamera ? Icons.camera_rear : Icons.camera_front),
+            icon: Icon(Icons.cameraswitch_outlined),
             onPressed: toggleCamera,
           ),
           IconButton(
             icon: Icon(_isCameraOff ? Icons.videocam_off : Icons.videocam),
             onPressed: toggleCameraOff,
+          ),
+          IconButton(
+            icon: Icon(_isSpeakerOn ? Icons.volume_up : Icons.volume_off),
+            onPressed: toggleSpeaker,
           ),
         ],
       ),
