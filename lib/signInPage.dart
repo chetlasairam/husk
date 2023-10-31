@@ -152,8 +152,10 @@ class _SignInPageState extends State<SignInPage> {
                         setState(() {
                           isLoading = false;
                         });
-                        Navigator.push(context,
-                            MaterialPageRoute(builder: (_) => HomePage()));
+                        Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => HomePage(nav: 1)));
                       } else {
                         showToast();
                         print("Login Failed");

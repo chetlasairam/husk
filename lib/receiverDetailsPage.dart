@@ -1,12 +1,20 @@
-import 'package:huskkk/audioCallPage.dart';
-import 'package:huskkk/videoCallPage.dart';
-import 'package:huskkk/videochatCallPage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:huskkk/callInvitation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:huskkk/chatBox.dart';
+import 'package:contacts_service/contacts_service.dart';
 import 'globals.dart' as globals;
-import 'dart:math' as math;
 
 class ReceiverDetails extends StatefulWidget {
+  final String userNum;
+  final String friendNum;
+
+  const ReceiverDetails({
+    super.key,
+    required this.userNum,
+    required this.friendNum,
+  });
   @override
   _ReceiverDetailsState createState() => _ReceiverDetailsState();
 }
@@ -26,8 +34,13 @@ class _ReceiverDetailsState extends State<ReceiverDetails> {
             color: Colors.white,
             child: Column(
               children: [
-                Patch(),
-                MainLayer()
+                Patch(
+                  userNum: widget.userNum,
+                  friendNum: widget.friendNum,
+                ),
+                MainLayer(
+                  friendNum: widget.friendNum,
+                )
 
                 // buttons()
               ],
@@ -38,14 +51,32 @@ class _ReceiverDetailsState extends State<ReceiverDetails> {
 }
 
 class Patch extends StatefulWidget {
+  final String userNum;
+  final String friendNum;
+
+  const Patch({
+    super.key,
+    required this.userNum,
+    required this.friendNum,
+  });
   @override
   _PatchState createState() => _PatchState();
 }
 
 class _PatchState extends State<Patch> {
+  Future<String> getContactName(String phoneNumber) async {
+    Iterable<Contact> contacts =
+        await ContactsService.getContacts(query: phoneNumber);
+    Contact contact = contacts.firstWhere(
+        (contact) => contact.phones!.any((item) => item.value == phoneNumber),
+        orElse: () => Contact());
+    return contact.displayName ?? phoneNumber;
+  }
+
   @override
   Widget build(BuildContext context) {
     return ClipPath(
+      clipper: CustomClipPath(),
       child: Container(
         width: globals.generalize(globals.screenWidth),
         height: globals.generalize(200),
@@ -76,100 +107,177 @@ class _PatchState extends State<Patch> {
                 child: Center(
                   child: Padding(
                     padding: EdgeInsets.only(bottom: globals.generalize(10)),
-                    child: Container(
-                      //color: Colors.yellow,
-                      child: Column(
-                        children: [
-                          // SizedBox(
-                          //   height: globals.generalize(20),
-                          // ),
-                          Align(
-                            alignment: Alignment.topCenter,
-                            child: Container(
-                                width: globals.generalize(70),
-                                height: globals.generalize(70),
-                                decoration: new BoxDecoration(
-                                    border: Border.all(
-                                        color: Colors.white, width: 3),
-                                    shape: BoxShape.circle,
-                                    image: new DecorationImage(
-                                        fit: BoxFit.fill,
-                                        image: AssetImage(
-                                            'assets/images/myPic.jpg')))),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(
-                                globals.generalize(8),
-                                globals.generalize(8),
-                                globals.generalize(8),
-                                globals.generalize(4)),
-                            child: Center(
-                                child: Text(
-                              "James",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: globals.generalize(25),
-                                  fontFamily: "FredokaOne"),
-                            )),
-                          ),
-                          Expanded(child: SizedBox()),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              GestureDetector(
-                                onTap: () {
+                    child: Column(
+                      children: [
+                        // SizedBox(
+                        //   height: globals.generalize(20),
+                        // ),
+                        Align(
+                          alignment: Alignment.topCenter,
+                          child: Container(
+                              width: globals.generalize(70),
+                              height: globals.generalize(70),
+                              decoration: BoxDecoration(
+                                  border:
+                                      Border.all(color: Colors.white, width: 3),
+                                  shape: BoxShape.circle,
+                                  image: const DecorationImage(
+                                      fit: BoxFit.fill,
+                                      image: AssetImage(
+                                          'assets/images/myPic.jpg')))),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                              globals.generalize(8),
+                              globals.generalize(8),
+                              globals.generalize(8),
+                              globals.generalize(4)),
+                          child: Center(
+                              child: FutureBuilder<String>(
+                            future: getContactNameFromNumber(widget.friendNum),
+                            builder: (BuildContext context,
+                                AsyncSnapshot<String> snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return Center(
+                                  child: Container(
+                                    height: 100,
+                                    width: 100,
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                ); // or some other widget while waiting
+                              } else {
+                                if (snapshot.hasError)
+                                  return Text('Error: ${snapshot.error}');
+                                else
+                                  return Text(snapshot.data ?? 'Not found',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: globals.generalize(25),
+                                          fontFamily: "FredokaOne"));
+                              }
+                            },
+                          )),
+                        ),
+                        Expanded(child: SizedBox()),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            GestureDetector(
+                              onTap: () async {
+                                await FirebaseFirestore.instance
+                                    .collection('o2ocalls')
+                                    .doc(widget.userNum)
+                                    .collection('records')
+                                    .doc(widget.friendNum)
+                                    .collection('log')
+                                    .add({
+                                  "callerId": widget.userNum,
+                                  "callreceiverId": widget.friendNum,
+                                  "message": "voice",
+                                  "type": "text",
+                                  "date": DateTime.now(),
+                                }).then((value) {
+                                  FirebaseFirestore.instance
+                                      .collection('o2ocalls')
+                                      .doc(widget.userNum)
+                                      .collection('records')
+                                      .doc(widget.friendNum)
+                                      .set({
+                                    'present_call': "voice",
+                                    'timestamp': FieldValue.serverTimestamp(),
+                                  });
+                                });
+
+                                await FirebaseFirestore.instance
+                                    .collection('o2ocalls')
+                                    .doc(widget.friendNum)
+                                    .collection('records')
+                                    .doc(widget.userNum)
+                                    .collection("log")
+                                    .add({
+                                  "callerId": widget.userNum,
+                                  "callreceiverId": widget.friendNum,
+                                  "message": "voice",
+                                  "type": "text",
+                                  "date": DateTime.now(),
+                                }).then((value) {
+                                  FirebaseFirestore.instance
+                                      .collection('o2ocalls')
+                                      .doc(widget.friendNum)
+                                      .collection('records')
+                                      .doc(widget.userNum)
+                                      .set({
+                                    "present_call": "voice",
+                                    'timestamp': FieldValue.serverTimestamp(),
+                                  });
+                                }).then((_) {
+                                  setState(() {
+                                    // sendMessage(message);
+                                  });
+
                                   Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                          builder: (_) => AudioCall()));
-                                },
-                                child: Icon(
-                                  Icons.call,
-                                  color: Colors.white,
-                                  size: globals.generalize(25),
-                                ),
+                                          builder: (_) => CallInvite(
+                                              user: 1,
+                                              ref: 2,
+                                              userNum: widget.userNum,
+                                              friendNum: widget.friendNum)));
+                                });
+                              },
+                              child: Icon(
+                                Icons.call,
+                                color: Colors.white,
+                                size: globals.generalize(25),
                               ),
-                              SizedBox(
-                                width: globals.generalize(12),
+                            ),
+                            SizedBox(
+                              width: globals.generalize(12),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => CallInvite(
+                                            user: 1,
+                                            ref: 3,
+                                            userNum: widget.userNum,
+                                            friendNum: widget.friendNum)));
+                              },
+                              child: Icon(
+                                Icons.videocam_outlined,
+                                color: Colors.white,
+                                size: globals.generalize(30),
                               ),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) => VideoCall()));
-                                },
-                                child: Icon(
-                                  Icons.videocam_outlined,
-                                  color: Colors.white,
-                                  size: globals.generalize(30),
-                                ),
+                            ),
+                            SizedBox(
+                              width: globals.generalize(12),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => CallInvite(
+                                            user: 1,
+                                            ref: 4,
+                                            userNum: widget.userNum,
+                                            friendNum: widget.friendNum)));
+                              },
+                              child: Icon(
+                                Icons.video_camera_back,
+                                color: Colors.white,
+                                size: globals.generalize(25),
                               ),
-                              SizedBox(
-                                width: globals.generalize(12),
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) => VideoChatCall(
-                                              myNum: "8309358983",
-                                              friendNum: "8309358981")));
-                                },
-                                child: Icon(
-                                  Icons.video_camera_back,
-                                  color: Colors.white,
-                                  size: globals.generalize(25),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(
-                            height: globals.generalize(20),
-                          )
-                        ],
-                      ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(
+                          height: globals.generalize(20),
+                        )
+                      ],
                     ),
                   ),
                 ),
@@ -216,7 +324,6 @@ class _PatchState extends State<Patch> {
           ),
         ),
       ),
-      clipper: CustomClipPath(),
     );
   }
 }
@@ -240,6 +347,13 @@ class CustomClipPath extends CustomClipper<Path> {
 }
 
 class MainLayer extends StatefulWidget {
+  final String friendNum;
+
+  const MainLayer({
+    super.key,
+    // required this.name,
+    required this.friendNum,
+  });
   @override
   State<MainLayer> createState() => _MainLayerState();
 }
@@ -497,7 +611,7 @@ class _MainLayerState extends State<MainLayer> {
                     child: SizedBox(),
                   ),
                   Text(
-                    "+91 8309358983",
+                    widget.friendNum,
                     style: TextStyle(
                         color: Colors.grey,
                         fontSize: globals.generalize(15),
@@ -1185,6 +1299,8 @@ class _MainLayerState extends State<MainLayer> {
 }
 
 class HeroWidgetDetail extends StatelessWidget {
+  const HeroWidgetDetail({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

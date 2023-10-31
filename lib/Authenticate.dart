@@ -9,7 +9,9 @@ class Authenticate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (_auth.currentUser != null) {
-      return HomePage();
+      return HomePage(
+          nav: 1,
+          );
     } else {
       return SignInPage();
     }

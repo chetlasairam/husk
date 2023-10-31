@@ -12,7 +12,7 @@ Future<User?> signup(String phno, String pass) async {
         email: (phno + "@gmail.com"), password: pass);
     print("Successfully created");
 
-    userCrendetial.user!.updateDisplayName(phno);
+    // userCrendetial.user!.updateDisplayName(phno);
     await _firestore.collection('users').doc(_auth.currentUser!.uid).set({
       "name": phno,
       "email": (phno + "@gmail.com"),

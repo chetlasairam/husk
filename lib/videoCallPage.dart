@@ -5,6 +5,13 @@ import 'globals.dart' as globals;
 ///Use zego
 
 class VideoCall extends StatefulWidget {
+  final String friendNum;
+  final String myNum;
+
+  const VideoCall({
+    required this.myNum,
+    required this.friendNum,
+  });
   @override
   State<VideoCall> createState() => _VideoCallState();
 }

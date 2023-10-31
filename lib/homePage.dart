@@ -1,4 +1,4 @@
-import 'package:flutter/scheduler.dart';
+import 'package:huskkk/callInvitation.dart';
 import 'package:huskkk/chatBox.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:huskkk/methods.dart';
@@ -6,12 +6,20 @@ import 'package:huskkk/searchPage.dart';
 import 'package:huskkk/settingspage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+// import 'package:huskkk/stream_listener_widget.dart';
+
 import 'globals.dart' as globals;
-import 'package:permission_handler/permission_handler.dart';
 import 'package:contacts_service/contacts_service.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 Future<String> getContactNameFromNumber(String phoneNumber) async {
+  // Request contacts permission
+  PermissionStatus status = await Permission.contacts.request();
+  if (!status.isGranted) {
+    return ''; // Return an empty string if permission is not granted
+  }
+
   final Iterable<Contact> contacts = await ContactsService.getContacts();
 
   for (final Contact contact in contacts) {
@@ -30,7 +38,13 @@ Future<String> getContactNameFromNumber(String phoneNumber) async {
   return ''; // Return an empty string if no matching contact is found
 }
 
+/// 1: HomePage
+/// 2: Audio Call
+/// 3: Video Call
+/// 4: Video Chat Call
 class HomePage extends StatefulWidget {
+  final int nav;
+  const HomePage({required this.nav});
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -40,23 +54,17 @@ class _HomePageState extends State<HomePage> {
 
   // List<Widget> documentWidgets = [];
 
-  @override
-  void initState() {
-    super.initState();
-    // retrieveDocumentNames();
-  }
-
-  // void retrieveDocumentNames() async {
-  //   QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-  //       .collection("chats")
-  //       .doc("num1")
-  //       .collection("messages")
-  //       .get();
-
-  //   setState(() {
-  //     documentWidgets =
-  //         querySnapshot.docs.map((doc) => ChatCard(doc.id)).toList();
-  //   });
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   if (widget.nav != 1) {
+  //     Future.delayed(Duration.zero, () {
+  //       Navigator.push(
+  //         context,
+  //         MaterialPageRoute(builder: (context) => CallInvite(ref: widget.nav)),
+  //       );
+  //     });
+  //   }
   // }
 
   @override
@@ -103,18 +111,21 @@ class _HomePageState extends State<HomePage> {
                                     snapshot.data.docs[index]['last_msg'];
                                 var lastMsgTime =
                                     snapshot.data.docs[index]['timestamp'];
-                                if (lastMsgTime != null) {}
-                                Timestamp timestamp = lastMsgTime;
-                                DateTime dateTime = timestamp.toDate();
-                                DateFormat formatter = DateFormat('HH:mm');
-                                String formattedTime =
-                                    formatter.format(dateTime);
-                                print("MESSAGE TIME:" + lastMsgTime.toString());
-                                return ChatCard(
-                                  phoneNumber: docId,
-                                  lastMsg: lastMsg,
-                                  lastMsgTime: formattedTime,
-                                );
+                                if (lastMsgTime != null) {
+                                  Timestamp timestamp = lastMsgTime;
+                                  DateTime dateTime = timestamp.toDate();
+                                  DateFormat formatter = DateFormat('HH:mm');
+                                  String formattedTime =
+                                      formatter.format(dateTime);
+                                  print(
+                                      "MESSAGE TIME:" + lastMsgTime.toString());
+                                  return ChatCard(
+                                    phoneNumber: docId,
+                                    lastMsg: lastMsg,
+                                    lastMsgTime: formattedTime,
+                                  );
+                                }
+                                return null;
                               });
                           // SingleChildScrollView(
                           //   child: Column(
@@ -142,7 +153,13 @@ class _HomePageState extends State<HomePage> {
                         } else if (snapshot.hasError) {
                           return Text('Error: ${snapshot.error}');
                         } else {
-                          return const CircularProgressIndicator();
+                          return Center(
+                            child: Container(
+                              height: 100,
+                              width: 100,
+                              child: const CircularProgressIndicator(),
+                            ),
+                          );
                         }
                       },
                     ),
@@ -190,9 +207,11 @@ class _HomePageState extends State<HomePage> {
             child: FloatingActionButton(
                 onPressed: () {
                   setState(() {
-                    print("========================================");
+                    print("=======================================");
+
                     print(_auth.currentUser);
-                    // ChatCard(_auth.currentUser!.displayName.toString());
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => Search()));
                     print("========================================");
                   });
                 },
@@ -266,7 +285,7 @@ class _ChatCardState extends State<ChatCard> {
               padding: EdgeInsets.fromLTRB(globals.generalize(12), 0,
                   globals.generalize(12), globals.generalize(8)),
               child: Container(
-                //color: Colors.yellow,
+                //
                 width: globals.screenWidth,
                 height: globals.generalize(50),
                 decoration: BoxDecoration(

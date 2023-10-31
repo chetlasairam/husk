@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'globals.dart' as globals;
 import 'signInPage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignUp extends StatefulWidget {
@@ -185,6 +186,9 @@ class _SignUpState extends State<SignUp> {
 
                     signup(_phno.text, _pass.text).then((user) {
                       if (user != null) {
+                        user.updateDisplayName(_phno.text).then((_) {
+                          print('Profile Updated');
+                        });
                         setState(() {
                           isLoading = false;
                         });

@@ -5,6 +5,13 @@ import 'globals.dart' as globals;
 ///Use zego
 
 class AudioCall extends StatefulWidget {
+  final String friendNum;
+  final String myNum;
+
+  const AudioCall({
+    required this.myNum,
+    required this.friendNum,
+  });
   @override
   _AudioCallState createState() => _AudioCallState();
 }
@@ -205,10 +212,8 @@ class _ButtonsState extends State<Buttons> {
               height: globals.generalize(60),
               child: ElevatedButton(
                   onPressed: () {
-                    setState(() {
-                      decision = true;
-                      control = false;
-                    });
+                    print("context popped");
+                    Navigator.pop(context);
                   },
                   child: Icon(
                     Icons.call_end,

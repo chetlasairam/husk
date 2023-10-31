@@ -66,11 +66,13 @@ class _SearchState extends State<Search> {
 
   Future<void> fetchContacts() async {
     final Iterable<Contact> contacts = await ContactsService.getContacts();
-    setState(() {
-      _contacts = contacts.toList();
-      _filteredContacts =
-          _contacts; // Initialize filtered contacts with all contacts
-    });
+    if (mounted) {
+      setState(() {
+        _contacts = contacts.toList();
+        _filteredContacts =
+            _contacts; // Initialize filtered contacts with all contacts
+      });
+    }
     filterContacts(_textEditingController.text); // Apply initial filtering
   }
 
@@ -111,10 +113,10 @@ class _SearchState extends State<Search> {
         ],
       );
     } else if (_contacts == null) {
-      return const SizedBox(
-        height: 100,
-        width: 100,
-        child: CircularProgressIndicator(),
+      return SizedBox(
+        height: 24,
+        width: 24,
+        child: Center(child: CircularProgressIndicator()),
       );
     } else if (_contacts!.isEmpty) {
       return ListTile(
@@ -174,11 +176,11 @@ class _SearchState extends State<Search> {
                     padding:
                         EdgeInsets.fromLTRB(0, 0, globals.generalize(8), 0),
                     child: Row(children: [
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(
-                            globals.generalize(4), 0, globals.generalize(4), 0),
-                        child: GestureDetector(
-                          onTap: () => Navigator.pop(context),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(globals.generalize(4), 0,
+                              globals.generalize(4), 0),
                           child: Icon(
                             Icons.arrow_back_ios_new_rounded,
                             size: globals.generalize(20),

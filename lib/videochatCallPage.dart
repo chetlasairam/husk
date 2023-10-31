@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:huskkk/homePage.dart';
 import 'globals.dart' as globals;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -30,7 +29,7 @@ class VideoChatCall extends StatefulWidget {
 
 class _VideoChatCallState extends State<VideoChatCall> {
   // bool control = false;
-  bool decision = !false;
+  // bool decision = !false;
   bool speaker = false;
   bool mute = false;
   bool drawOpen = false;
@@ -80,6 +79,7 @@ class _VideoChatCallState extends State<VideoChatCall> {
           debugPrint("remote user $remoteUid left channel");
           setState(() {
             _remoteUid = null;
+            endCall();
           });
         },
         onTokenPrivilegeWillExpire: (RtcConnection connection, String token) {
@@ -104,7 +104,12 @@ class _VideoChatCallState extends State<VideoChatCall> {
   Future<void> endCall() async {
     await _engine.leaveChannel();
     _engine.destroyCustomVideoTrack(0);
-    Navigator.pop(context); // Close the current screen and go back
+    deleteVideoChatPipe();
+    Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HomePage(nav: 1),
+        )); // Close the current screen and go back
   }
 
   void toggleMute() {
@@ -143,6 +148,19 @@ class _VideoChatCallState extends State<VideoChatCall> {
     }
   }
 
+  void deleteVideoChatPipe() async {
+    try {
+      // Reference to the document you want to delete
+      await FirebaseFirestore.instance
+          .collection("o2ocalls")
+          .doc("${widget.myNum}_${widget.friendNum}")
+          .delete()
+          .then((_) => {print('===========Document deleted successfully')});
+    } catch (e) {
+      print('==========Error deleting document: $e');
+    }
+  }
+
   TextEditingController _controller = TextEditingController();
   String _message = '';
   ValueNotifier<bool> showGestureDetector = ValueNotifier<bool>(false);
@@ -159,416 +177,273 @@ class _VideoChatCallState extends State<VideoChatCall> {
       body: SafeArea(
           child: Stack(
         children: [
-          SingleChildScrollView(
-              child: Visibility(visible: !decision, child: video())),
-          // child: video()),
-          // Visibility(
-          //   visible: !decision,
-          //   child: Opacity(opacity: 0.6, child: chats()),
-          // ),
-          // buttons(),
+          SingleChildScrollView(child: video()),
+          Opacity(opacity: 0.6, child: chats()),
+          buttons(),
         ],
       )),
     );
   }
 
   Widget buttons() {
-    return !decision
-        ? Container(
-            height: globals.screenHeight - globals.statusBarHeight,
-            width: globals.screenWidth,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(globals.generalize(0), 0,
-                  globals.generalize(0), globals.generalize(30)),
-              child: Container(
-                width: globals.screenWidth - globals.generalize(20),
-                //color: Colors.red,
-                child: Column(
-                  crossAxisAlignment: decision
-                      ? CrossAxisAlignment.center
-                      : CrossAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.max,
-                  mainAxisAlignment: decision
-                      ? MainAxisAlignment.end
-                      : MainAxisAlignment.start,
-                  children: [
-                    Visibility(visible: decision, child: patch()),
-                    Visibility(
-                      visible: decision,
-                      child: Expanded(
-                        child: SizedBox(),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: globals.generalize(30)),
-                      child: decisionButtons(),
-                    ),
-                    controlButtons()
-                  ],
-                ),
-              ),
-            ),
-          )
-        : Container(
-            height: globals.screenHeight - globals.statusBarHeight,
-            width: globals.screenWidth,
-            color: Colors.grey[300],
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(globals.generalize(0), 0,
-                  globals.generalize(0), globals.generalize(30)),
-              child: Container(
-                width: globals.screenWidth - globals.generalize(20),
-                //color: Colors.red,
-                child: Column(
-                  crossAxisAlignment: decision
-                      ? CrossAxisAlignment.center
-                      : CrossAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.max,
-                  mainAxisAlignment: decision
-                      ? MainAxisAlignment.end
-                      : MainAxisAlignment.start,
-                  children: [
-                    Visibility(visible: decision, child: patch()),
-                    Visibility(
-                      visible: decision,
-                      child: Expanded(
-                        child: SizedBox(),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: globals.generalize(30)),
-                      child: decisionButtons(),
-                    ),
-                    controlButtons()
-                  ],
-                ),
-              ),
-            ),
-          );
-  }
-
-  Widget decisionButtons() {
-    return Visibility(
-      visible: decision,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: globals.generalize(60),
-            height: globals.generalize(60),
-            child: ElevatedButton(
-                //style: ElevatedButton.styleFrom({}),
-                onPressed: () {
-                  setState(() {
-                    decision = false;
-                    //control = true;
-                    drawOpen = false;
-                  });
-                },
-                child: Icon(
-                  Icons.videocam,
-                  color: Colors.white,
-                  size: globals.generalize(25),
-                ),
-                style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.resolveWith<Color>(
-                    (Set<MaterialState> states) {
-                      return Colors.green;
-                    },
-                  ),
-                  elevation: MaterialStateProperty.all<double>(10),
-                  shadowColor: MaterialStateProperty.all<Color>(Colors.green),
-                  shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                    RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(50.0),
-                    ),
-                  ),
-                )),
+    return Container(
+      height: globals.screenHeight - globals.statusBarHeight,
+      width: globals.screenWidth,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(globals.generalize(0), 0,
+            globals.generalize(0), globals.generalize(30)),
+        child: Container(
+          width: globals.screenWidth - globals.generalize(20),
+          //color: Colors.red,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [controlButtons()],
           ),
-          Expanded(
-            child: SizedBox(
-              width: globals.generalize(20),
-            ),
-          ),
-          SizedBox(
-            width: globals.generalize(60),
-            height: globals.generalize(60),
-            child: ElevatedButton(
-                onPressed: () {},
-                child: Icon(
-                  Icons.call_end,
-                  color: Colors.white,
-                  size: globals.generalize(25),
-                ),
-                style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.resolveWith<Color>(
-                    (Set<MaterialState> states) {
-                      return (Colors.red[700])!;
-                    },
-                  ),
-                  elevation: MaterialStateProperty.all<double>(10),
-                  shadowColor: MaterialStateProperty.all<Color>(Colors.red),
-                  shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                    RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(50.0),
-                    ),
-                  ),
-                )),
-          )
-        ],
+        ),
       ),
     );
   }
 
   Widget controlButtons() {
-    return Visibility(
-        visible: !decision,
-        child: Padding(
-          padding: EdgeInsets.only(right: globals.generalize(8)),
-          child: Column(
-            children: [
-              SizedBox(
-                width: globals.generalize(45),
-                height: globals.generalize(45),
-                child: ElevatedButton(
-                    //style: ElevatedButton.styleFrom({}),
-                    onPressed: () {
-                      setState(() {
-                        decision = false;
-                        //control = true;
-                        drawOpen = !drawOpen;
-                      });
-                    },
-                    child: Icon(
-                      drawOpen
-                          ? Icons.keyboard_arrow_down_outlined
-                          : Icons.arrow_forward_ios_rounded,
-                      color: Colors.black,
-                      size: drawOpen
-                          ? globals.generalize(20)
-                          : globals.generalize(15),
-                    ),
-                    style: ButtonStyle(
-                      backgroundColor: MaterialStateProperty.resolveWith<Color>(
-                        (Set<MaterialState> states) {
-                          return Colors.white;
-                        },
-                      ),
-                      elevation: MaterialStateProperty.all<double>(3),
-                      shadowColor:
-                          MaterialStateProperty.all<Color>(Colors.white),
-                      shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(50.0),
-                        ),
-                      ),
-                    )),
-              ),
-              Visibility(
-                visible: drawOpen,
-                child: Container(
-                  //color: Colors.green,
-                  child: Column(children: [
-                    Padding(
-                      padding: EdgeInsets.only(top: globals.generalize(4)),
-                      child: SizedBox(
-                        width: globals.generalize(45),
-                        height: globals.generalize(45),
-                        child: ElevatedButton(
-                            //style: ElevatedButton.styleFrom({}),
-                            onPressed: () {
-                              setState(() {
-                                speaker = !speaker;
-                                toggleSpeaker();
-                              });
-                            },
-                            child: Icon(
-                              (speaker == false)
-                                  ? Icons.volume_up
-                                  : Icons.volume_off,
-                              color: Colors.grey,
-                              size: globals.generalize(20),
-                            ),
-                            style: ButtonStyle(
-                              backgroundColor:
-                                  MaterialStateProperty.resolveWith<Color>(
-                                (Set<MaterialState> states) {
-                                  return Colors.white;
-                                },
-                              ),
-                              elevation: MaterialStateProperty.all<double>(3),
-                              shadowColor: MaterialStateProperty.all<Color>(
-                                  Colors.white),
-                              shape: MaterialStateProperty.all<
-                                  RoundedRectangleBorder>(
-                                RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(50.0),
-                                ),
-                              ),
-                            )),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.only(top: globals.generalize(4)),
-                      child: SizedBox(
-                        width: globals.generalize(45),
-                        height: globals.generalize(45),
-                        child: ElevatedButton(
-                            //style: ElevatedButton.styleFrom({}),
-                            onPressed: () {
-                              setState(() {
-                                mute = !mute;
-                                toggleMute();
-                              });
-                            },
-                            child: Icon(
-                              (mute == false)
-                                  ? Icons.mic_outlined
-                                  : Icons.mic_off,
-                              color: Colors.grey,
-                              size: globals.generalize(20),
-                            ),
-                            style: ButtonStyle(
-                              backgroundColor:
-                                  MaterialStateProperty.resolveWith<Color>(
-                                (Set<MaterialState> states) {
-                                  return Colors.white;
-                                },
-                              ),
-                              elevation: MaterialStateProperty.all<double>(3),
-                              shadowColor: MaterialStateProperty.all<Color>(
-                                  Colors.white),
-                              shape: MaterialStateProperty.all<
-                                  RoundedRectangleBorder>(
-                                RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(50.0),
-                                ),
-                              ),
-                            )),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.only(top: globals.generalize(4)),
-                      child: SizedBox(
-                        width: globals.generalize(45),
-                        height: globals.generalize(45),
-                        child: ElevatedButton(
-                            //style: ElevatedButton.styleFrom({}),
-                            onPressed: () {
-                              setState(() {
-                                _isFrontCamera = !_isFrontCamera;
-                                toggleCamera();
-                              });
-                            },
-                            child: Icon(
-                              Icons.flip_camera_ios_outlined,
-                              color: Colors.grey,
-                              size: globals.generalize(20),
-                            ),
-                            style: ButtonStyle(
-                              backgroundColor:
-                                  MaterialStateProperty.resolveWith<Color>(
-                                (Set<MaterialState> states) {
-                                  return Colors.white;
-                                },
-                              ),
-                              elevation: MaterialStateProperty.all<double>(3),
-                              shadowColor: MaterialStateProperty.all<Color>(
-                                  Colors.white),
-                              shape: MaterialStateProperty.all<
-                                  RoundedRectangleBorder>(
-                                RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(50.0),
-                                ),
-                              ),
-                            )),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.only(top: globals.generalize(4)),
-                      child: SizedBox(
-                        width: globals.generalize(45),
-                        height: globals.generalize(45),
-                        child: ElevatedButton(
-                            //style: ElevatedButton.styleFrom({}),
-                            onPressed: () {
-                              setState(() {
-                                camOnOff = !camOnOff;
-                                toggleCameraOff();
-                              });
-                            },
-                            child: Icon(
-                              (camOnOff == false)
-                                  ? Icons.videocam_rounded
-                                  : Icons.videocam_off_sharp,
-                              color: Colors.grey,
-                              size: globals.generalize(20),
-                            ),
-                            style: ButtonStyle(
-                              backgroundColor:
-                                  MaterialStateProperty.resolveWith<Color>(
-                                (Set<MaterialState> states) {
-                                  return Colors.white;
-                                },
-                              ),
-                              elevation: MaterialStateProperty.all<double>(3),
-                              shadowColor: MaterialStateProperty.all<Color>(
-                                  Colors.white),
-                              shape: MaterialStateProperty.all<
-                                  RoundedRectangleBorder>(
-                                RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(50.0),
-                                ),
-                              ),
-                            )),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.only(top: globals.generalize(4)),
-                      child: SizedBox(
-                        width: globals.generalize(45),
-                        height: globals.generalize(45),
-                        child: ElevatedButton(
-                            //style: ElevatedButton.styleFrom({}),
-                            onPressed: () {
-                              setState(() {
-                                decision = true;
-                                //control = false;
-                                endCall();
-                              });
-                            },
-                            child: Icon(
-                              Icons.call_end,
-                              color: Colors.white,
-                              size: globals.generalize(20),
-                            ),
-                            style: ButtonStyle(
-                              backgroundColor:
-                                  MaterialStateProperty.resolveWith<Color>(
-                                (Set<MaterialState> states) {
-                                  return Colors.red;
-                                },
-                              ),
-                              elevation: MaterialStateProperty.all<double>(3),
-                              shadowColor:
-                                  MaterialStateProperty.all<Color>(Colors.red),
-                              shape: MaterialStateProperty.all<
-                                  RoundedRectangleBorder>(
-                                RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(50.0),
-                                ),
-                              ),
-                            )),
-                      ),
-                    ),
-                  ]),
+    return Padding(
+      padding: EdgeInsets.only(right: globals.generalize(8)),
+      child: Column(
+        children: [
+          SizedBox(
+            width: globals.generalize(45),
+            height: globals.generalize(45),
+            child: ElevatedButton(
+                //style: ElevatedButton.styleFrom({}),
+                onPressed: () {
+                  setState(() {
+                    drawOpen = !drawOpen;
+                  });
+                },
+                child: Icon(
+                  drawOpen
+                      ? Icons.keyboard_arrow_down_outlined
+                      : Icons.arrow_forward_ios_rounded,
+                  color: Colors.black,
+                  size: drawOpen
+                      ? globals.generalize(20)
+                      : globals.generalize(15),
                 ),
-              )
-            ],
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.resolveWith<Color>(
+                    (Set<MaterialState> states) {
+                      return Colors.white;
+                    },
+                  ),
+                  elevation: MaterialStateProperty.all<double>(3),
+                  shadowColor: MaterialStateProperty.all<Color>(Colors.white),
+                  shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(50.0),
+                    ),
+                  ),
+                )),
           ),
-        ));
+          Visibility(
+            visible: drawOpen,
+            child: Container(
+              //color: Colors.green,
+              child: Column(children: [
+                Padding(
+                  padding: EdgeInsets.only(top: globals.generalize(4)),
+                  child: SizedBox(
+                    width: globals.generalize(45),
+                    height: globals.generalize(45),
+                    child: ElevatedButton(
+                        //style: ElevatedButton.styleFrom({}),
+                        onPressed: () {
+                          setState(() {
+                            speaker = !speaker;
+                            toggleSpeaker();
+                          });
+                        },
+                        child: Icon(
+                          (speaker == false)
+                              ? Icons.volume_up
+                              : Icons.volume_off,
+                          color: Colors.grey,
+                          size: globals.generalize(20),
+                        ),
+                        style: ButtonStyle(
+                          backgroundColor:
+                              MaterialStateProperty.resolveWith<Color>(
+                            (Set<MaterialState> states) {
+                              return Colors.white;
+                            },
+                          ),
+                          elevation: MaterialStateProperty.all<double>(3),
+                          shadowColor:
+                              MaterialStateProperty.all<Color>(Colors.white),
+                          shape:
+                              MaterialStateProperty.all<RoundedRectangleBorder>(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(50.0),
+                            ),
+                          ),
+                        )),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(top: globals.generalize(4)),
+                  child: SizedBox(
+                    width: globals.generalize(45),
+                    height: globals.generalize(45),
+                    child: ElevatedButton(
+                        //style: ElevatedButton.styleFrom({}),
+                        onPressed: () {
+                          setState(() {
+                            mute = !mute;
+                            toggleMute();
+                          });
+                        },
+                        child: Icon(
+                          (mute == false) ? Icons.mic_outlined : Icons.mic_off,
+                          color: Colors.grey,
+                          size: globals.generalize(20),
+                        ),
+                        style: ButtonStyle(
+                          backgroundColor:
+                              MaterialStateProperty.resolveWith<Color>(
+                            (Set<MaterialState> states) {
+                              return Colors.white;
+                            },
+                          ),
+                          elevation: MaterialStateProperty.all<double>(3),
+                          shadowColor:
+                              MaterialStateProperty.all<Color>(Colors.white),
+                          shape:
+                              MaterialStateProperty.all<RoundedRectangleBorder>(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(50.0),
+                            ),
+                          ),
+                        )),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(top: globals.generalize(4)),
+                  child: SizedBox(
+                    width: globals.generalize(45),
+                    height: globals.generalize(45),
+                    child: ElevatedButton(
+                        //style: ElevatedButton.styleFrom({}),
+                        onPressed: () {
+                          setState(() {
+                            _isFrontCamera = !_isFrontCamera;
+                            toggleCamera();
+                          });
+                        },
+                        child: Icon(
+                          Icons.flip_camera_ios_outlined,
+                          color: Colors.grey,
+                          size: globals.generalize(20),
+                        ),
+                        style: ButtonStyle(
+                          backgroundColor:
+                              MaterialStateProperty.resolveWith<Color>(
+                            (Set<MaterialState> states) {
+                              return Colors.white;
+                            },
+                          ),
+                          elevation: MaterialStateProperty.all<double>(3),
+                          shadowColor:
+                              MaterialStateProperty.all<Color>(Colors.white),
+                          shape:
+                              MaterialStateProperty.all<RoundedRectangleBorder>(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(50.0),
+                            ),
+                          ),
+                        )),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(top: globals.generalize(4)),
+                  child: SizedBox(
+                    width: globals.generalize(45),
+                    height: globals.generalize(45),
+                    child: ElevatedButton(
+                        //style: ElevatedButton.styleFrom({}),
+                        onPressed: () {
+                          setState(() {
+                            camOnOff = !camOnOff;
+                            toggleCameraOff();
+                          });
+                        },
+                        child: Icon(
+                          (camOnOff == true)
+                              ? Icons.videocam_rounded
+                              : Icons.videocam_off_sharp,
+                          color: Colors.grey,
+                          size: globals.generalize(20),
+                        ),
+                        style: ButtonStyle(
+                          backgroundColor:
+                              MaterialStateProperty.resolveWith<Color>(
+                            (Set<MaterialState> states) {
+                              return Colors.white;
+                            },
+                          ),
+                          elevation: MaterialStateProperty.all<double>(3),
+                          shadowColor:
+                              MaterialStateProperty.all<Color>(Colors.white),
+                          shape:
+                              MaterialStateProperty.all<RoundedRectangleBorder>(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(50.0),
+                            ),
+                          ),
+                        )),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(top: globals.generalize(4)),
+                  child: SizedBox(
+                    width: globals.generalize(45),
+                    height: globals.generalize(45),
+                    child: ElevatedButton(
+                        //style: ElevatedButton.styleFrom({}),
+                        onPressed: () {
+                          setState(() {
+                            endCall();
+                          });
+                        },
+                        child: Icon(
+                          Icons.call_end,
+                          color: Colors.white,
+                          size: globals.generalize(20),
+                        ),
+                        style: ButtonStyle(
+                          backgroundColor:
+                              MaterialStateProperty.resolveWith<Color>(
+                            (Set<MaterialState> states) {
+                              return Colors.red;
+                            },
+                          ),
+                          elevation: MaterialStateProperty.all<double>(3),
+                          shadowColor:
+                              MaterialStateProperty.all<Color>(Colors.red),
+                          shape:
+                              MaterialStateProperty.all<RoundedRectangleBorder>(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(50.0),
+                            ),
+                          ),
+                        )),
+                  ),
+                ),
+              ]),
+            ),
+          )
+        ],
+      ),
+    );
   }
 
   Widget chats() {
@@ -601,10 +476,8 @@ class _VideoChatCallState extends State<VideoChatCall> {
                   child: Container(
                       child: StreamBuilder(
                           stream: FirebaseFirestore.instance
-                              .collection("chats")
-                              .doc(widget.myNum)
-                              .collection('messages')
-                              .doc(widget.friendNum)
+                              .collection("o2ocalls")
+                              .doc("${widget.myNum}_${widget.friendNum}")
                               .collection('chats')
                               .orderBy("date", descending: true)
                               .snapshots(),
@@ -699,10 +572,8 @@ class _VideoChatCallState extends State<VideoChatCall> {
                               String message = _controller.text;
                               _controller.clear();
                               await FirebaseFirestore.instance
-                                  .collection('chats')
-                                  .doc(widget.myNum)
-                                  .collection('messages')
-                                  .doc(widget.friendNum)
+                                  .collection("o2ocalls")
+                                  .doc("${widget.myNum}_${widget.friendNum}")
                                   .collection('chats')
                                   .add({
                                 "senderId": widget.myNum,
@@ -720,35 +591,39 @@ class _VideoChatCallState extends State<VideoChatCall> {
                                   'last_msg': message,
                                   'timestamp': FieldValue.serverTimestamp(),
                                 });
-                              });
-
-                              await FirebaseFirestore.instance
-                                  .collection('chats')
-                                  .doc(widget.friendNum)
-                                  .collection('messages')
-                                  .doc(widget.myNum)
-                                  .collection("chats")
-                                  .add({
-                                "senderId": widget.myNum,
-                                "receiverId": widget.friendNum,
-                                "message": message,
-                                "type": "text",
-                                "date": DateTime.now(),
-                              }).then((value) {
-                                FirebaseFirestore.instance
-                                    .collection('chats')
-                                    .doc(widget.friendNum)
-                                    .collection('messages')
-                                    .doc(widget.myNum)
-                                    .set({
-                                  "last_msg": message,
-                                  'timestamp': FieldValue.serverTimestamp(),
-                                });
                               }).then((_) {
                                 setState(() {
                                   sendMessage(message);
                                 });
                               });
+
+                              // await FirebaseFirestore.instance
+                              //     .collection('chats')
+                              //     .doc(widget.friendNum)
+                              //     .collection('messages')
+                              //     .doc(widget.myNum)
+                              //     .collection("chats")
+                              //     .add({
+                              //   "senderId": widget.myNum,
+                              //   "receiverId": widget.friendNum,
+                              //   "message": message,
+                              //   "type": "text",
+                              //   "date": DateTime.now(),
+                              // }).then((value) {
+                              //   FirebaseFirestore.instance
+                              //       .collection('chats')
+                              //       .doc(widget.friendNum)
+                              //       .collection('messages')
+                              //       .doc(widget.myNum)
+                              //       .set({
+                              //     "last_msg": message,
+                              //     'timestamp': FieldValue.serverTimestamp(),
+                              //   });
+                              // }).then((_) {
+                              //   setState(() {
+                              //     sendMessage(message);
+                              //   });
+                              // });
                             },
                             child: Container(
                               child: Icon(
@@ -759,97 +634,6 @@ class _VideoChatCallState extends State<VideoChatCall> {
                             ),
                           ),
                         ),
-                        Visibility(
-                          visible: !showGestureDetector.value,
-                          child: Padding(
-                              padding: EdgeInsets.fromLTRB(0, 0, 0, 0),
-                              child: SpeedDial(
-                                direction: SpeedDialDirection.up,
-                                icon: Icons.add_circle_outline_rounded,
-                                elevation: 0,
-                                iconTheme:
-                                    IconThemeData(size: globals.generalize(28)),
-                                //animatedIcon: AnimatedIcons.add_event,
-                                buttonSize: Size(globals.generalize(41),
-                                    globals.generalize(41)),
-                                overlayOpacity: 0,
-                                backgroundColor: Colors.white,
-                                foregroundColor: Colors.grey,
-                                childPadding: EdgeInsets.fromLTRB(0, 3, 0, 2),
-                                childrenButtonSize: Size(globals.generalize(35),
-                                    globals.generalize(35)),
-                                children: [
-                                  SpeedDialChild(
-                                      child: Icon(
-                                    Icons.upload_file_outlined,
-                                    size: globals.generalize(25),
-                                    color: Colors.grey,
-                                  )),
-                                  SpeedDialChild(
-                                      child: Icon(
-                                    Icons.location_history_outlined,
-                                    size: globals.generalize(25),
-                                    color: Colors.grey,
-                                  )),
-                                  SpeedDialChild(
-                                      child: Icon(
-                                    Icons.my_location_rounded,
-                                    size: globals.generalize(25),
-                                    color: Colors.grey,
-                                  )),
-                                  SpeedDialChild(
-                                      child: Icon(
-                                    Icons.image_outlined,
-                                    size: globals.generalize(25),
-                                    color: Colors.grey,
-                                  )),
-                                  SpeedDialChild(
-                                      child: Icon(
-                                    Icons.camera_alt_outlined,
-                                    size: globals.generalize(25),
-                                    color: Colors.grey,
-                                  ))
-                                ],
-                              )
-
-                              // Icon(
-                              //   Icons.add_circle_outline_rounded,
-                              //   size: globals.generalize(25),
-                              //   color: Colors.grey,
-                              // ),
-                              ),
-                        ),
-                        // Padding(
-                        //   padding: EdgeInsets.fromLTRB(
-                        //       0,
-                        //       globals.generalize(0),
-                        //       0,
-                        //       globals.generalize(0)),
-                        //   child:
-                        //       // Container(
-                        //       //   //color: Colors.purple,
-                        //       //   height: globals.generalize(30),
-                        //       //   width: globals.generalize(30),
-                        //       //   decoration: BoxDecoration(
-                        //       //     color: Colors.green[700],
-                        //       //     borderRadius: BorderRadius.all(
-                        //       //       Radius.circular(100),
-                        //       //     ),
-                        //       //   ),
-                        //       //   child:
-                        //       Visibility(
-                        //     visible: true,
-                        //     child: Container(
-                        //       //color: Color.fromARGB(255, 189, 50, 8),
-                        //       child: Icon(
-                        //         Icons.arrow_circle_right_rounded,
-                        //         size: globals.generalize(40),
-                        //         color: Colors.green,
-                        //       ),
-                        //     ),
-                        //   ),
-                        // ),
-                        //),
                       ],
                     ),
                   ),
@@ -866,23 +650,37 @@ class _VideoChatCallState extends State<VideoChatCall> {
 
   Widget video() {
     ///friend Screen Container
-    return Stack(
-      children: [
-        Center(
-          child: _remoteVideo(),
-        ),
-        Align(
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: 100,
-            height: 150,
-            child: Center(
-              child: _localVideo(),
-            ),
-          ),
-        ),
-      ],
-    );
+    return Stack(children: [
+      Container(
+        height: globals.screenHeight - globals.statusBarHeight,
+        width: globals.screenWidth,
+        //color: Colors.purple,
+        alignment: Alignment.topLeft,
+        decoration: new BoxDecoration(
+            //border: Border.all(color: Colors.white, width: 3),
+            //shape: BoxShape.circle,
+            image: new DecorationImage(
+                fit: BoxFit.fill,
+                image: NetworkImage(
+                    "https://images.unsplash.com/photo-1581562444313-98be7b621dc2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MjB8fGRvZyUyMHBvcnRyYWl0fGVufDB8fDB8fHww&w=1000&q=80"))),
+
+        ///My screen container
+        child: _remoteVideo(),
+      ),
+      Container(
+        width: 100,
+        height: 140,
+        decoration: new BoxDecoration(
+            //border: Border.all(color: Colors.white, width: 3),
+            //shape: BoxShape.circle,
+            color: Colors.yellow,
+            image: new DecorationImage(
+                fit: BoxFit.fill,
+                image: NetworkImage(
+                    "https://images.unsplash.com/photo-1543055484-ac8fe612bf31?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8Y2F0JTIwcG9ydHJhaXR8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=600&q=60"))),
+        child: _localVideo(),
+      ),
+    ]);
   }
 
   Widget _remoteVideo() {
@@ -911,10 +709,7 @@ class _VideoChatCallState extends State<VideoChatCall> {
         ),
       );
     } else {
-      return const Text(
-        'LV Loading',
-        textAlign: TextAlign.center,
-      );
+      return const CircularProgressIndicator();
     }
   }
 }

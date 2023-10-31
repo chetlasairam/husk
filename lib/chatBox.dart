@@ -1,6 +1,8 @@
 import 'package:huskkk/receiverDetailsPage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+// import 'package:huskkk/stream_listener_widget.dart';
+
 import 'globals.dart' as globals;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -39,23 +41,6 @@ class ChatBox extends StatefulWidget {
 }
 
 class _ChatBoxState extends State<ChatBox> {
-  // List<Widget> _chats = [
-  //   SizedBox(
-  //     height: 10,
-  //   ),
-  //   LeftChat(),
-  //   RightChat(),
-  //   LeftChat(),
-  //   RightChat(),
-  //   LeftChat(),
-  //   RightChat(),
-  //   LeftChat(),
-  //   RightChat(),
-  //   LeftChat(),
-  //   RightChat(),
-
-  // ];
-
   String? _contactName;
 
   @override
@@ -120,6 +105,7 @@ class _ChatBoxState extends State<ChatBox> {
                 )),
                 child: Row(
                   children: [
+                    // StreamListenerWidget(),
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: Padding(
@@ -137,7 +123,10 @@ class _ChatBoxState extends State<ChatBox> {
                         Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (_) => ReceiverDetails()));
+                                builder: (_) => ReceiverDetails(
+                                    userNum:
+                                        _auth.currentUser!.displayName ?? '',
+                                    friendNum: friendNum)));
                       },
                       child: Row(
                         children: [
@@ -272,7 +261,12 @@ class _ChatBoxState extends State<ChatBox> {
                                         });
                                   }
                                   return Center(
-                                      child: CircularProgressIndicator());
+                                    child: Container(
+                                      height: 100,
+                                      width: 100,
+                                      child: const CircularProgressIndicator(),
+                                    ),
+                                  );
                                 })
 
                             // ListView(shrinkWrap: true, children: <Widget>[
@@ -412,68 +406,86 @@ class _ChatBoxState extends State<ChatBox> {
                                   ),
                                 ),
                               ),
+
                               Visibility(
                                 visible: !showGestureDetector.value,
                                 child: Padding(
-                                    padding: EdgeInsets.fromLTRB(0, 0, 0, 0),
-                                    child: SpeedDial(
-                                      direction: SpeedDialDirection.up,
-                                      icon: Icons.add_circle_outline_rounded,
-                                      elevation: 0,
-                                      iconTheme: IconThemeData(
-                                          size: globals.generalize(28)),
-                                      //animatedIcon: AnimatedIcons.add_event,
-                                      buttonSize: Size(globals.generalize(41),
-                                          globals.generalize(41)),
-                                      overlayOpacity: 0,
-                                      backgroundColor: Colors.white,
-                                      foregroundColor: Colors.grey,
-                                      childPadding:
-                                          EdgeInsets.fromLTRB(0, 3, 0, 2),
-                                      childrenButtonSize: Size(
-                                          globals.generalize(35),
-                                          globals.generalize(35)),
-                                      children: [
-                                        SpeedDialChild(
-                                            child: Icon(
-                                          Icons.upload_file_outlined,
-                                          size: globals.generalize(25),
-                                          color: Colors.grey,
-                                        )),
-                                        SpeedDialChild(
-                                            child: Icon(
-                                          Icons.location_history_outlined,
-                                          size: globals.generalize(25),
-                                          color: Colors.grey,
-                                        )),
-                                        SpeedDialChild(
-                                            child: Icon(
-                                          Icons.my_location_rounded,
-                                          size: globals.generalize(25),
-                                          color: Colors.grey,
-                                        )),
-                                        SpeedDialChild(
-                                            child: Icon(
-                                          Icons.image_outlined,
-                                          size: globals.generalize(25),
-                                          color: Colors.grey,
-                                        )),
-                                        SpeedDialChild(
-                                            child: Icon(
-                                          Icons.camera_alt_outlined,
-                                          size: globals.generalize(25),
-                                          color: Colors.grey,
-                                        ))
-                                      ],
-                                    )
-
-                                    // Icon(
-                                    //   Icons.add_circle_outline_rounded,
-                                    //   size: globals.generalize(25),
-                                    //   color: Colors.grey,
-                                    // ),
-                                    ),
+                                  padding: EdgeInsets.fromLTRB(
+                                    globals.generalize(8),
+                                    0,
+                                    globals.generalize(8),
+                                    0,
+                                  ),
+                                  child: Icon(
+                                    Icons.image_outlined,
+                                    size: globals.generalize(25),
+                                    color: Colors.grey,
+                                  ),
+                                ),
                               ),
+
+                              // Visibility(
+                              //   visible: !showGestureDetector.value,
+                              //   child: Padding(
+                              //       padding: EdgeInsets.fromLTRB(0, 0, 0, 0),
+                              //       child: SpeedDial(
+                              //         direction: SpeedDialDirection.up,
+                              //         icon: Icons.add_circle_outline_rounded,
+                              //         elevation: 0,
+                              //         iconTheme: IconThemeData(
+                              //             size: globals.generalize(28)),
+                              //         //animatedIcon: AnimatedIcons.add_event,
+                              //         buttonSize: Size(globals.generalize(41),
+                              //             globals.generalize(41)),
+                              //         overlayOpacity: 0,
+                              //         backgroundColor: Colors.white,
+                              //         foregroundColor: Colors.grey,
+                              //         childPadding:
+                              //             EdgeInsets.fromLTRB(0, 3, 0, 2),
+                              //         childrenButtonSize: Size(
+                              //             globals.generalize(35),
+                              //             globals.generalize(35)),
+                              // children: [
+                              // SpeedDialChild(
+                              //     child: Icon(
+                              //   Icons.upload_file_outlined,
+                              //   size: globals.generalize(25),
+                              //   color: Colors.grey,
+                              // )),
+                              // SpeedDialChild(
+                              //     child: Icon(
+                              //   Icons.location_history_outlined,
+                              //   size: globals.generalize(25),
+                              //   color: Colors.grey,
+                              // )),
+                              // SpeedDialChild(
+                              //     child: Icon(
+                              //   Icons.my_location_rounded,
+                              //   size: globals.generalize(25),
+                              //   color: Colors.grey,
+                              // )),
+                              // SpeedDialChild(
+                              //     child: Icon(
+                              //   Icons.image_outlined,
+                              //   size: globals.generalize(25),
+                              //   color: Colors.grey,
+                              // )),
+                              // SpeedDialChild(
+                              //     child: Icon(
+                              //   Icons.camera_alt_outlined,
+                              //   size: globals.generalize(25),
+                              //   color: Colors.grey,
+                              // ))
+                              // ],
+                              // )
+
+                              // Icon(
+                              //   Icons.add_circle_outline_rounded,
+                              //   size: globals.generalize(25),
+                              //   color: Colors.grey,
+                              // ),
+                              //       ),
+                              // ),
                               // Padding(
                               //   padding: EdgeInsets.fromLTRB(
                               //       0,
