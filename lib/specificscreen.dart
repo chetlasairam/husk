@@ -1,12 +1,15 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 
 class SpecificScreen extends StatelessWidget {
   SpecificScreen({super.key});
+  static const route = '/specificScreen';
 
   @override
   Widget build(BuildContext context) {
-    // Use the data from documentData to build your screen.
-    // You can access specific fields using documentData['fieldName'].
+    final message = ModalRoute.of(context)!.settings.arguments as RemoteMessage;
+    // Use the data from message to build your screen.
+    // You can access specific fields using message.notification.title and message.notification.body.
     return Scaffold(
       appBar: AppBar(
         title: Text('Specific Screen'),
@@ -15,7 +18,8 @@ class SpecificScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text('Data received:'),
+            Text('${message.notification!.title}'),
+            Text('${message.notification!.body}'),
           ],
         ),
       ),

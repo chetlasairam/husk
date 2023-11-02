@@ -238,7 +238,10 @@ class _ChatBoxState extends State<ChatBox> {
                                   if (snapshot.hasData) {
                                     if (snapshot.data.docs.length < 1) {
                                       return Center(
-                                        child: Text("Say Hi"),
+                                        child: (friendNum != myNum)
+                                            ? Text("Say Hi")
+                                            : Text(
+                                                "Can't send message to own number"),
                                       );
                                     }
                                     return ListView.builder(
@@ -279,248 +282,255 @@ class _ChatBoxState extends State<ChatBox> {
                             // ]),
                             ),
                       ),
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(globals.generalize(8), 0,
-                            globals.generalize(8), globals.generalize(10)),
-                        child: Container(
-                          width: globals.screenWidth,
-                          height: globals.generalize(40),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.all(
-                              Radius.circular(100),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.2),
-                                spreadRadius: 7,
-                                blurRadius: 7,
-                                offset: Offset(0, 0),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.fromLTRB(
-                                    globals.generalize(8),
-                                    0,
-                                    globals.generalize(8),
-                                    0),
-                                child: Icon(
-                                  Icons.sentiment_satisfied_alt_outlined,
-                                  size: globals.generalize(25),
-                                  color: Colors.grey,
+                      Visibility(
+                          visible: (friendNum != myNum) ? true : false,
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(
+                                globals.generalize(8),
+                                0,
+                                globals.generalize(8),
+                                globals.generalize(10)),
+                            child: Container(
+                              width: globals.screenWidth,
+                              height: globals.generalize(40),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(100),
                                 ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.2),
+                                    spreadRadius: 7,
+                                    blurRadius: 7,
+                                    offset: Offset(0, 0),
+                                  ),
+                                ],
                               ),
-                              ValueListenableBuilder<bool>(
-                                valueListenable: showGestureDetector,
-                                builder: (context, value, _) {
-                                  return Expanded(
-                                    child: SizedBox(
-                                      child: TextFormField(
-                                        controller: _controller,
-                                        decoration: InputDecoration.collapsed(
-                                          hintText: 'Type something here',
+                              child: Row(
+                                children: [
+                                  Padding(
+                                    padding: EdgeInsets.fromLTRB(
+                                        globals.generalize(8),
+                                        0,
+                                        globals.generalize(8),
+                                        0),
+                                    child: Icon(
+                                      Icons.sentiment_satisfied_alt_outlined,
+                                      size: globals.generalize(25),
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  ValueListenableBuilder<bool>(
+                                    valueListenable: showGestureDetector,
+                                    builder: (context, value, _) {
+                                      return Expanded(
+                                        child: SizedBox(
+                                          child: TextFormField(
+                                            controller: _controller,
+                                            decoration:
+                                                InputDecoration.collapsed(
+                                              hintText: 'Type something here',
+                                            ),
+                                            keyboardType:
+                                                TextInputType.multiline,
+                                            minLines: 1,
+                                            maxLines: 5,
+                                            onChanged: (text) {
+                                              setState(() {
+                                                showGestureDetector.value =
+                                                    text.isNotEmpty;
+                                              });
+                                            },
+                                          ),
                                         ),
-                                        keyboardType: TextInputType.multiline,
-                                        minLines: 1,
-                                        maxLines: 5,
-                                        onChanged: (text) {
-                                          setState(() {
-                                            showGestureDetector.value =
-                                                text.isNotEmpty;
+                                      );
+                                    },
+                                  ),
+                                  Visibility(
+                                    visible: showGestureDetector.value,
+                                    child: GestureDetector(
+                                      onTap: () async {
+                                        String message = _controller.text;
+                                        _controller.clear();
+                                        await FirebaseFirestore.instance
+                                            .collection('chats')
+                                            .doc(myNum)
+                                            .collection('messages')
+                                            .doc(friendNum)
+                                            .collection('chats')
+                                            .add({
+                                          "senderId": myNum,
+                                          "receiverId": friendNum,
+                                          "message": message,
+                                          "type": "text",
+                                          "date": DateTime.now(),
+                                        }).then((value) {
+                                          FirebaseFirestore.instance
+                                              .collection('chats')
+                                              .doc(myNum)
+                                              .collection('messages')
+                                              .doc(friendNum)
+                                              .set({
+                                            'last_msg': message,
+                                            'timestamp':
+                                                FieldValue.serverTimestamp(),
                                           });
-                                        },
+                                        });
+
+                                        await FirebaseFirestore.instance
+                                            .collection('chats')
+                                            .doc(friendNum)
+                                            .collection('messages')
+                                            .doc(myNum)
+                                            .collection("chats")
+                                            .add({
+                                          "senderId": myNum,
+                                          "receiverId": friendNum,
+                                          "message": message,
+                                          "type": "text",
+                                          "date": DateTime.now(),
+                                        }).then((value) {
+                                          FirebaseFirestore.instance
+                                              .collection('chats')
+                                              .doc(friendNum)
+                                              .collection('messages')
+                                              .doc(myNum)
+                                              .set({
+                                            "last_msg": message,
+                                            'timestamp':
+                                                FieldValue.serverTimestamp(),
+                                          });
+                                        }).then((_) {
+                                          setState(() {
+                                            sendMessage(message);
+                                          });
+                                        });
+                                      },
+                                      child: Container(
+                                        child: Icon(
+                                          Icons.arrow_circle_right_rounded,
+                                          size: globals.generalize(40),
+                                          color: Colors.green,
+                                        ),
                                       ),
                                     ),
-                                  );
-                                },
-                              ),
-                              Visibility(
-                                visible: showGestureDetector.value,
-                                child: GestureDetector(
-                                  onTap: () async {
-                                    String message = _controller.text;
-                                    _controller.clear();
-                                    await FirebaseFirestore.instance
-                                        .collection('chats')
-                                        .doc(myNum)
-                                        .collection('messages')
-                                        .doc(friendNum)
-                                        .collection('chats')
-                                        .add({
-                                      "senderId": myNum,
-                                      "receiverId": friendNum,
-                                      "message": message,
-                                      "type": "text",
-                                      "date": DateTime.now(),
-                                    }).then((value) {
-                                      FirebaseFirestore.instance
-                                          .collection('chats')
-                                          .doc(myNum)
-                                          .collection('messages')
-                                          .doc(friendNum)
-                                          .set({
-                                        'last_msg': message,
-                                        'timestamp':
-                                            FieldValue.serverTimestamp(),
-                                      });
-                                    });
+                                  ),
 
-                                    await FirebaseFirestore.instance
-                                        .collection('chats')
-                                        .doc(friendNum)
-                                        .collection('messages')
-                                        .doc(myNum)
-                                        .collection("chats")
-                                        .add({
-                                      "senderId": myNum,
-                                      "receiverId": friendNum,
-                                      "message": message,
-                                      "type": "text",
-                                      "date": DateTime.now(),
-                                    }).then((value) {
-                                      FirebaseFirestore.instance
-                                          .collection('chats')
-                                          .doc(friendNum)
-                                          .collection('messages')
-                                          .doc(myNum)
-                                          .set({
-                                        "last_msg": message,
-                                        'timestamp':
-                                            FieldValue.serverTimestamp(),
-                                      });
-                                    }).then((_) {
-                                      setState(() {
-                                        sendMessage(message);
-                                      });
-                                    });
-                                  },
-                                  child: Container(
-                                    child: Icon(
-                                      Icons.arrow_circle_right_rounded,
-                                      size: globals.generalize(40),
-                                      color: Colors.green,
+                                  Visibility(
+                                    visible: !showGestureDetector.value,
+                                    child: Padding(
+                                      padding: EdgeInsets.fromLTRB(
+                                        globals.generalize(8),
+                                        0,
+                                        globals.generalize(8),
+                                        0,
+                                      ),
+                                      child: Icon(
+                                        Icons.image_outlined,
+                                        size: globals.generalize(25),
+                                        color: Colors.grey,
+                                      ),
                                     ),
                                   ),
-                                ),
+
+                                  // Visibility(
+                                  //   visible: !showGestureDetector.value,
+                                  //   child: Padding(
+                                  //       padding: EdgeInsets.fromLTRB(0, 0, 0, 0),
+                                  //       child: SpeedDial(
+                                  //         direction: SpeedDialDirection.up,
+                                  //         icon: Icons.add_circle_outline_rounded,
+                                  //         elevation: 0,
+                                  //         iconTheme: IconThemeData(
+                                  //             size: globals.generalize(28)),
+                                  //         //animatedIcon: AnimatedIcons.add_event,
+                                  //         buttonSize: Size(globals.generalize(41),
+                                  //             globals.generalize(41)),
+                                  //         overlayOpacity: 0,
+                                  //         backgroundColor: Colors.white,
+                                  //         foregroundColor: Colors.grey,
+                                  //         childPadding:
+                                  //             EdgeInsets.fromLTRB(0, 3, 0, 2),
+                                  //         childrenButtonSize: Size(
+                                  //             globals.generalize(35),
+                                  //             globals.generalize(35)),
+                                  // children: [
+                                  // SpeedDialChild(
+                                  //     child: Icon(
+                                  //   Icons.upload_file_outlined,
+                                  //   size: globals.generalize(25),
+                                  //   color: Colors.grey,
+                                  // )),
+                                  // SpeedDialChild(
+                                  //     child: Icon(
+                                  //   Icons.location_history_outlined,
+                                  //   size: globals.generalize(25),
+                                  //   color: Colors.grey,
+                                  // )),
+                                  // SpeedDialChild(
+                                  //     child: Icon(
+                                  //   Icons.my_location_rounded,
+                                  //   size: globals.generalize(25),
+                                  //   color: Colors.grey,
+                                  // )),
+                                  // SpeedDialChild(
+                                  //     child: Icon(
+                                  //   Icons.image_outlined,
+                                  //   size: globals.generalize(25),
+                                  //   color: Colors.grey,
+                                  // )),
+                                  // SpeedDialChild(
+                                  //     child: Icon(
+                                  //   Icons.camera_alt_outlined,
+                                  //   size: globals.generalize(25),
+                                  //   color: Colors.grey,
+                                  // ))
+                                  // ],
+                                  // )
+
+                                  // Icon(
+                                  //   Icons.add_circle_outline_rounded,
+                                  //   size: globals.generalize(25),
+                                  //   color: Colors.grey,
+                                  // ),
+                                  //       ),
+                                  // ),
+                                  // Padding(
+                                  //   padding: EdgeInsets.fromLTRB(
+                                  //       0,
+                                  //       globals.generalize(0),
+                                  //       0,
+                                  //       globals.generalize(0)),
+                                  //   child:
+                                  //       // Container(
+                                  //       //   //color: Colors.purple,
+                                  //       //   height: globals.generalize(30),
+                                  //       //   width: globals.generalize(30),
+                                  //       //   decoration: BoxDecoration(
+                                  //       //     color: Colors.green[700],
+                                  //       //     borderRadius: BorderRadius.all(
+                                  //       //       Radius.circular(100),
+                                  //       //     ),
+                                  //       //   ),
+                                  //       //   child:
+                                  //       Visibility(
+                                  //     visible: true,
+                                  //     child: Container(
+                                  //       //color: Color.fromARGB(255, 189, 50, 8),
+                                  //       child: Icon(
+                                  //         Icons.arrow_circle_right_rounded,
+                                  //         size: globals.generalize(40),
+                                  //         color: Colors.green,
+                                  //       ),
+                                  //     ),
+                                  //   ),
+                                  // ),
+                                  //),
+                                ],
                               ),
-
-                              Visibility(
-                                visible: !showGestureDetector.value,
-                                child: Padding(
-                                  padding: EdgeInsets.fromLTRB(
-                                    globals.generalize(8),
-                                    0,
-                                    globals.generalize(8),
-                                    0,
-                                  ),
-                                  child: Icon(
-                                    Icons.image_outlined,
-                                    size: globals.generalize(25),
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ),
-
-                              // Visibility(
-                              //   visible: !showGestureDetector.value,
-                              //   child: Padding(
-                              //       padding: EdgeInsets.fromLTRB(0, 0, 0, 0),
-                              //       child: SpeedDial(
-                              //         direction: SpeedDialDirection.up,
-                              //         icon: Icons.add_circle_outline_rounded,
-                              //         elevation: 0,
-                              //         iconTheme: IconThemeData(
-                              //             size: globals.generalize(28)),
-                              //         //animatedIcon: AnimatedIcons.add_event,
-                              //         buttonSize: Size(globals.generalize(41),
-                              //             globals.generalize(41)),
-                              //         overlayOpacity: 0,
-                              //         backgroundColor: Colors.white,
-                              //         foregroundColor: Colors.grey,
-                              //         childPadding:
-                              //             EdgeInsets.fromLTRB(0, 3, 0, 2),
-                              //         childrenButtonSize: Size(
-                              //             globals.generalize(35),
-                              //             globals.generalize(35)),
-                              // children: [
-                              // SpeedDialChild(
-                              //     child: Icon(
-                              //   Icons.upload_file_outlined,
-                              //   size: globals.generalize(25),
-                              //   color: Colors.grey,
-                              // )),
-                              // SpeedDialChild(
-                              //     child: Icon(
-                              //   Icons.location_history_outlined,
-                              //   size: globals.generalize(25),
-                              //   color: Colors.grey,
-                              // )),
-                              // SpeedDialChild(
-                              //     child: Icon(
-                              //   Icons.my_location_rounded,
-                              //   size: globals.generalize(25),
-                              //   color: Colors.grey,
-                              // )),
-                              // SpeedDialChild(
-                              //     child: Icon(
-                              //   Icons.image_outlined,
-                              //   size: globals.generalize(25),
-                              //   color: Colors.grey,
-                              // )),
-                              // SpeedDialChild(
-                              //     child: Icon(
-                              //   Icons.camera_alt_outlined,
-                              //   size: globals.generalize(25),
-                              //   color: Colors.grey,
-                              // ))
-                              // ],
-                              // )
-
-                              // Icon(
-                              //   Icons.add_circle_outline_rounded,
-                              //   size: globals.generalize(25),
-                              //   color: Colors.grey,
-                              // ),
-                              //       ),
-                              // ),
-                              // Padding(
-                              //   padding: EdgeInsets.fromLTRB(
-                              //       0,
-                              //       globals.generalize(0),
-                              //       0,
-                              //       globals.generalize(0)),
-                              //   child:
-                              //       // Container(
-                              //       //   //color: Colors.purple,
-                              //       //   height: globals.generalize(30),
-                              //       //   width: globals.generalize(30),
-                              //       //   decoration: BoxDecoration(
-                              //       //     color: Colors.green[700],
-                              //       //     borderRadius: BorderRadius.all(
-                              //       //       Radius.circular(100),
-                              //       //     ),
-                              //       //   ),
-                              //       //   child:
-                              //       Visibility(
-                              //     visible: true,
-                              //     child: Container(
-                              //       //color: Color.fromARGB(255, 189, 50, 8),
-                              //       child: Icon(
-                              //         Icons.arrow_circle_right_rounded,
-                              //         size: globals.generalize(40),
-                              //         color: Colors.green,
-                              //       ),
-                              //     ),
-                              //   ),
-                              // ),
-                              //),
-                            ],
-                          ),
-                        ),
-                      )
+                            ),
+                          ))
                     ],
                   ),
                 ),

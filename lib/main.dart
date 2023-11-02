@@ -2,9 +2,12 @@
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:huskkk/specificscreen.dart';
+import 'api/firebase_api.dart';
 // import 'package:flutter/services.dart';
 
 import 'splashsr.dart';
+
 // import 'patternPage.dart';
 // import 'trash1.dart';
 // import 'trash2.dart';
@@ -22,10 +25,14 @@ import 'splashsr.dart';
 // import 'callInvitation.dart';
 // import 'imagepicker.dart';
 // import 'zegocallcode.dart';
-
+final navigatorKey = GlobalKey<NavigatorState>();
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await Firebase.initializeApp();
+  print("====Now Trying FCM done====");
+  await FirebaseApi().initNotifictions();
+  print("====Trying FCM====");
   //SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values());
   runApp(const MyApp());
 }
@@ -41,6 +48,8 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
+      navigatorKey: navigatorKey,
+
       // home: ImagePick(myNum: "1234567890", friendNum: "919908723592"),
       // home: Test(),
       // home: Search(),
@@ -67,6 +76,7 @@ class MyApp extends StatelessWidget {
       // ),
       home: SplashScreen(),
       // home: const Test(),
+      routes: {SpecificScreen.route: (context) => SpecificScreen()},
     );
   }
 }
