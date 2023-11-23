@@ -6,6 +6,25 @@ import 'package:huskkk/chatBox.dart';
 import 'package:contacts_service/contacts_service.dart';
 import 'globals.dart' as globals;
 
+Future<String> getContactNameFromNumber(String phoneNumber) async {
+  final Iterable<Contact> contacts = await ContactsService.getContacts();
+
+  for (final Contact contact in contacts) {
+    if (contact.phones != null) {
+      for (final Item phone in contact.phones!) {
+        final normalizedPhoneNumber =
+            phone.value?.replaceAll(RegExp(r'[^0-9]'), '');
+
+        if (normalizedPhoneNumber == phoneNumber) {
+          return contact.displayName ?? '';
+        }
+      }
+    }
+  }
+
+  return ''; // Return an empty string if no matching contact is found
+}
+
 class ReceiverDetails extends StatefulWidget {
   final String userNum;
   final String friendNum;
@@ -64,6 +83,25 @@ class Patch extends StatefulWidget {
 }
 
 class _PatchState extends State<Patch> {
+  String? _contactName;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadContactName();
+  }
+
+  Future<void> _loadContactName() async {
+    final contactName = await getContactNameFromNumber(widget.friendNum);
+    setState(() {
+      if (contactName == "") {
+        _contactName = widget.friendNum;
+      } else {
+        _contactName = contactName;
+      }
+    });
+  }
+
   Future<String> getContactName(String phoneNumber) async {
     Iterable<Contact> contacts =
         await ContactsService.getContacts(query: phoneNumber);
@@ -133,87 +171,53 @@ class _PatchState extends State<Patch> {
                               globals.generalize(8),
                               globals.generalize(4)),
                           child: Center(
-                              child: FutureBuilder<String>(
-                            future: getContactNameFromNumber(widget.friendNum),
-                            builder: (BuildContext context,
-                                AsyncSnapshot<String> snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return Center(
-                                  child: Container(
-                                    height: 100,
-                                    width: 100,
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                ); // or some other widget while waiting
-                              } else {
-                                if (snapshot.hasError)
-                                  return Text('Error: ${snapshot.error}');
-                                else
-                                  return Text(snapshot.data ?? 'Not found',
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: globals.generalize(25),
-                                          fontFamily: "FredokaOne"));
-                              }
-                            },
-                          )),
+                            //     child: FutureBuilder<String>(
+                            //   future: getContactNameFromNumber(widget.friendNum),
+                            //   builder: (BuildContext context,
+                            //       AsyncSnapshot<String> snapshot) {
+                            //     if (snapshot.connectionState ==
+                            //         ConnectionState.waiting) {
+                            //       return Center(
+                            //         child: Container(
+                            //           height: 10,
+                            //           width: 10,
+                            //           child: CircularProgressIndicator(),
+                            //         ),
+                            //       ); // or some other widget while waiting
+                            //     } else {
+                            //       if (snapshot.hasError)
+                            //         return Text('Error: ${snapshot.error}');
+                            //       else
+                            //         return Text(snapshot.data ?? 'Not found',
+                            //             style: TextStyle(
+                            //                 color: Colors.white,
+                            //                 fontSize: globals.generalize(25),
+                            //                 fontFamily: "FredokaOne"));
+                            //     }
+                            //   },
+                            // )
+
+                            ///////////////////////
+                            child: Text(
+                              _contactName ?? widget.friendNum,
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: globals.generalize(18),
+                                  fontFamily: "FredokaOne"),
+                            ),
+                          ),
                         ),
                         Expanded(child: SizedBox()),
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             GestureDetector(
-                              onTap: () async {
-                                await FirebaseFirestore.instance
-                                    .collection('o2ocalls')
-                                    .doc(widget.userNum)
-                                    .collection('records')
-                                    .doc(widget.friendNum)
-                                    .collection('log')
-                                    .add({
-                                  "callerId": widget.userNum,
-                                  "callreceiverId": widget.friendNum,
-                                  "message": "voice",
-                                  "type": "text",
-                                  "date": DateTime.now(),
-                                }).then((value) {
-                                  FirebaseFirestore.instance
-                                      .collection('o2ocalls')
-                                      .doc(widget.userNum)
-                                      .collection('records')
-                                      .doc(widget.friendNum)
-                                      .set({
-                                    'present_call': "voice",
-                                    'timestamp': FieldValue.serverTimestamp(),
-                                  });
-                                });
-
-                                await FirebaseFirestore.instance
-                                    .collection('o2ocalls')
-                                    .doc(widget.friendNum)
-                                    .collection('records')
-                                    .doc(widget.userNum)
-                                    .collection("log")
-                                    .add({
-                                  "callerId": widget.userNum,
-                                  "callreceiverId": widget.friendNum,
-                                  "message": "voice",
-                                  "type": "text",
-                                  "date": DateTime.now(),
-                                }).then((value) {
-                                  FirebaseFirestore.instance
-                                      .collection('o2ocalls')
-                                      .doc(widget.friendNum)
-                                      .collection('records')
-                                      .doc(widget.userNum)
-                                      .set({
-                                    "present_call": "voice",
-                                    'timestamp': FieldValue.serverTimestamp(),
-                                  });
-                                }).then((_) {
+                              onTap: () {
+                                setupCall(widget.userNum, widget.friendNum,
+                                        "voice")
+                                    .then((_) {
                                   setState(() {
-                                    // sendMessage(message);
+                                    // sendMessage(message); or any other state updates
                                   });
 
                                   Navigator.push(
@@ -224,6 +228,8 @@ class _PatchState extends State<Patch> {
                                               ref: 2,
                                               userNum: widget.userNum,
                                               friendNum: widget.friendNum)));
+                                }).catchError((error) {
+                                  // Handle any errors here
                                 });
                               },
                               child: Icon(
@@ -237,19 +243,29 @@ class _PatchState extends State<Patch> {
                             ),
                             GestureDetector(
                               onTap: () {
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => CallInvite(
-                                            user: 1,
-                                            ref: 3,
-                                            userNum: widget.userNum,
-                                            friendNum: widget.friendNum)));
+                                setupCall(widget.userNum, widget.friendNum,
+                                        "video")
+                                    .then((_) {
+                                  setState(() {
+                                    // sendMessage(message); or any other state updates
+                                  });
+
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) => CallInvite(
+                                              user: 1,
+                                              ref: 3,
+                                              userNum: widget.userNum,
+                                              friendNum: widget.friendNum)));
+                                }).catchError((error) {
+                                  // Handle any errors here
+                                });
                               },
                               child: Icon(
-                                Icons.videocam_outlined,
+                                Icons.videocam,
                                 color: Colors.white,
-                                size: globals.generalize(30),
+                                size: globals.generalize(25),
                               ),
                             ),
                             SizedBox(
@@ -257,14 +273,24 @@ class _PatchState extends State<Patch> {
                             ),
                             GestureDetector(
                               onTap: () {
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => CallInvite(
-                                            user: 1,
-                                            ref: 4,
-                                            userNum: widget.userNum,
-                                            friendNum: widget.friendNum)));
+                                setupCall(widget.userNum, widget.friendNum,
+                                        "videochat")
+                                    .then((_) {
+                                  setState(() {
+                                    // sendMessage(message); or any other state updates
+                                  });
+
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) => CallInvite(
+                                              user: 1,
+                                              ref: 4,
+                                              userNum: widget.userNum,
+                                              friendNum: widget.friendNum)));
+                                }).catchError((error) {
+                                  // Handle any errors here
+                                });
                               },
                               child: Icon(
                                 Icons.video_camera_back,
@@ -326,6 +352,62 @@ class _PatchState extends State<Patch> {
       ),
     );
   }
+}
+
+setupCall(userNum, friendNum, msg) async {
+  await FirebaseFirestore.instance
+      .collection('o2ocalls')
+      .doc(userNum)
+      .collection('records')
+      .doc(friendNum)
+      .collection('log')
+      .add({
+    "callerId": userNum,
+    "callreceiverId": friendNum,
+    "message": msg,
+    "type": "text",
+    "date": DateTime.now(),
+  }).then((value) {
+    FirebaseFirestore.instance
+        .collection('o2ocalls')
+        .doc(userNum)
+        .collection('records')
+        .doc(friendNum)
+        .set({
+      'present_call': msg,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }).then((value) {
+    FirebaseFirestore.instance.collection('o2ocalls').doc(friendNum).set({
+      'caller': userNum,
+      'present_call': msg,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  });
+
+  await FirebaseFirestore.instance
+      .collection('o2ocalls')
+      .doc(friendNum)
+      .collection('records')
+      .doc(userNum)
+      .collection("log")
+      .add({
+    "callerId": userNum,
+    "callreceiverId": friendNum,
+    "message": msg,
+    "type": "text",
+    "date": DateTime.now(),
+  }).then((value) {
+    FirebaseFirestore.instance
+        .collection('o2ocalls')
+        .doc(friendNum)
+        .collection('records')
+        .doc(userNum)
+        .set({
+      "present_call": msg,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  });
 }
 
 class CustomClipPath extends CustomClipper<Path> {

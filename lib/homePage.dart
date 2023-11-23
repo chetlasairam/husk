@@ -66,6 +66,17 @@ class _HomePageState extends State<HomePage> {
   //     });
   //   }
   // }
+  bool showButton = false;
+  void updateButtonVisibility(bool isVisible) {
+    Future.microtask(() {
+      if (mounted) {
+        setState(() {
+          print("=====Changing======");
+          showButton = isVisible;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -181,6 +192,49 @@ class _HomePageState extends State<HomePage> {
                   // ),
                 ],
               ),
+              StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('o2ocalls')
+                    .doc(myNum)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  bool documentExists = snapshot.hasData &&
+                      snapshot.data?.data() != null &&
+                      (snapshot.data?.data() as Map).isNotEmpty;
+                  print(snapshot.data);
+                  if (documentExists && !showButton) {
+                    updateButtonVisibility(true);
+                  } else if (!documentExists && showButton) {
+                    updateButtonVisibility(false);
+                  }
+
+                  return SizedBox.shrink();
+                },
+              ),
+              if (showButton)
+                Center(
+                  child: Container(
+                    decoration: BoxDecoration(
+                        color: Colors.grey,
+                        borderRadius: BorderRadius.circular(10)),
+                    width: 200,
+                    height: 150,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton(
+                                onPressed: () {}, child: Icon(Icons.call)),
+                            ElevatedButton(
+                                onPressed: () {}, child: Icon(Icons.call_end))
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                )
             ],
           ),
         ),
@@ -260,13 +314,15 @@ class _ChatCardState extends State<ChatCard> {
 
   Future<void> _loadContactName() async {
     final contactName = await getContactNameFromNumber(widget.phoneNumber);
-    setState(() {
-      if (contactName == "") {
-        _contactName = widget.phoneNumber;
-      } else {
-        _contactName = contactName;
-      }
-    });
+    if (mounted) {
+      setState(() {
+        if (contactName == "") {
+          _contactName = widget.phoneNumber;
+        } else {
+          _contactName = contactName;
+        }
+      });
+    }
   }
 
   @override

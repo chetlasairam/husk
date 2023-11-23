@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:huskkk/videochatCallPage.dart';
 import 'package:huskkk/zegocallcode.dart';
@@ -28,20 +29,45 @@ class _CallInviteState extends State<CallInvite> {
 
   bool speaker = false;
   bool mute = false;
+  bool documentExists = false;
 
   @override
   Widget build(BuildContext context) {
+    print("building-----------");
     globals.screenWidth = MediaQuery.of(context).size.width;
     globals.screenHeight = MediaQuery.of(context).size.height;
     globals.statusBarHeight = MediaQuery.of(context).padding.top;
-    return Scaffold(
-      backgroundColor: Color(0xff0D5882),
-      body: SafeArea(
-          child: Stack(
-        children: [
-          buttons(),
-        ],
-      )),
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('o2ocalls')
+          .doc(widget.friendNum)
+          .snapshots(),
+      builder: (context, snapshot) {
+        // Update the state variable based on the current snapshot
+        documentExists = snapshot.hasData &&
+            snapshot.data?.data() != null &&
+            (snapshot.data?.data() as Map).isNotEmpty;
+
+        if (!documentExists) {
+          // Delay the pop to handle quick state changes
+          Future.delayed(Duration(milliseconds: 500), () {
+            // Check the state variable again before popping
+            if (mounted && !documentExists) {
+              Navigator.pop(context);
+            }
+          });
+        }
+        return Scaffold(
+          backgroundColor: Color(0xff0D5882),
+          body: SafeArea(
+              child: Stack(
+            children: [
+              buttons(),
+            ],
+          )),
+        );
+      },
     );
   }
 
@@ -146,7 +172,22 @@ class _CallInviteState extends State<CallInvite> {
           height: globals.generalize(60),
           child: ElevatedButton(
               onPressed: () {
-                callReject();
+                FirebaseFirestore.instance
+                    .collection('o2ocalls')
+                    .doc(widget.userNum)
+                    .update({
+                  "caller": FieldValue
+                      .delete(), // Replace 'field1' with your actual field name
+                  "present_call": FieldValue
+                      .delete(), // Replace 'field2' with your actual field name
+                  "timestamp": FieldValue.delete(),
+                }).then(
+                  (value) {
+                    callReject();
+                  },
+                );
+
+                // callReject();
               },
               child: Icon(
                 Icons.call_end,
@@ -220,8 +261,19 @@ class _CallInviteState extends State<CallInvite> {
             height: globals.generalize(60),
             child: ElevatedButton(
                 onPressed: () {
-                  print("context popped");
-                  Navigator.pop(context);
+                  FirebaseFirestore.instance
+                      .collection('o2ocalls')
+                      .doc(widget.friendNum)
+                      .update({
+                    "caller": FieldValue
+                        .delete(), // Replace 'field1' with your actual field name
+                    "present_call": FieldValue
+                        .delete(), // Replace 'field2' with your actual field name
+                    "timestamp": FieldValue.delete(),
+                    // Add as many fields as your document contains
+                  }).then((value) {
+                    callReject();
+                  });
                 },
                 child: Icon(
                   Icons.call_end,

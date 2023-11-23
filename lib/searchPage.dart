@@ -77,20 +77,22 @@ class _SearchState extends State<Search> {
   }
 
   void filterContacts(String filterText) {
-    setState(() {
-      if (filterText.isEmpty) {
-        _filteredContacts =
-            _contacts; // If filter text is empty, show all contacts
-      } else {
-        _filteredContacts = _contacts
-            ?.where((contact) =>
-                contact.displayName
-                    ?.toLowerCase()
-                    .contains(filterText.toLowerCase()) ==
-                true)
-            .toList(); // Filter contacts based on the filter text
-      }
-    });
+    if (mounted) {
+      setState(() {
+        if (filterText.isEmpty) {
+          _filteredContacts =
+              _contacts; // If filter text is empty, show all contacts
+        } else {
+          _filteredContacts = _contacts
+              ?.where((contact) =>
+                  contact.displayName
+                      ?.toLowerCase()
+                      .contains(filterText.toLowerCase()) ==
+                  true)
+              .toList(); // Filter contacts based on the filter text
+        }
+      });
+    }
   }
 
   Widget _buildContactsList() {
