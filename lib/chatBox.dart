@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:huskkk/receiverDetailsPage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:huskkk/videochatCallPage.dart';
 // import 'package:huskkk/stream_listener_widget.dart';
 
 import 'globals.dart' as globals;
@@ -8,6 +10,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:contacts_service/contacts_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 Future<String> getContactNameFromNumber(String phoneNumber) async {
   final Iterable<Contact> contacts = await ContactsService.getContacts();
@@ -86,6 +89,19 @@ class _ChatBoxState extends State<ChatBox> {
     globals.statusBarHeight = MediaQuery.of(context).padding.top;
     String myNum = _auth.currentUser!.displayName.toString();
     String friendNum = widget.friendNum;
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(friendNum)
+        .get()
+        .then((DocumentSnapshot documentSnapshot) {
+      if (documentSnapshot.exists) {
+        String token =
+            (documentSnapshot.data() as Map<String, dynamic>)['token'];
+        // Use the token here
+      } else {
+        print('Document does not exist on the database');
+      }
+    });
 
     return Scaffold(
         backgroundColor: Color(0xff0D5882),

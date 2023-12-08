@@ -6,6 +6,9 @@ import 'package:huskkk/searchPage.dart';
 import 'package:huskkk/settingspage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:huskkk/videochatCallPage.dart';
+import 'package:huskkk/zegocallcode.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 // import 'package:huskkk/stream_listener_widget.dart';
 
 import 'globals.dart' as globals;
@@ -50,6 +53,34 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  @override
+  void initState() {
+    super.initState();
+    requestPermission();
+  }
+
+  void requestPermission() async {
+    print("In requestPermission========");
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+      sound: true,
+    );
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      print('User granted permission');
+    } else if (settings.authorizationStatus ==
+        AuthorizationStatus.provisional) {
+      print('User granted provisional permission');
+    } else {
+      print('User declined or has not accepted permission');
+    }
+  }
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // List<Widget> documentWidgets = [];
@@ -222,13 +253,123 @@ class _HomePageState extends State<HomePage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        StreamBuilder<DocumentSnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('o2ocalls')
+                              .doc(myNum)
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            String name =
+                                (snapshot.data?.data() as Map?)?['caller'] ??
+                                    '';
+                            return Text(name);
+                          },
+                        ),
+                        StreamBuilder<DocumentSnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('o2ocalls')
+                              .doc(myNum)
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            String name = (snapshot.data?.data()
+                                    as Map?)?['present_call'] ??
+                                '';
+                            return Text(name);
+                          },
+                        ),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
+                            StreamBuilder<DocumentSnapshot>(
+                              stream: FirebaseFirestore.instance
+                                  .collection('o2ocalls')
+                                  .doc(myNum)
+                                  .snapshots(),
+                              builder: (context, snapshot) {
+                                var friendNum = (snapshot.data?.data()
+                                        as Map?)?['caller'] ??
+                                    '';
+                                return ElevatedButton(
+                                  onPressed: () {
+                                    var callID = '$friendNum' + "_$myNum";
+                                    FirebaseFirestore.instance
+                                        .collection('o2ocalls')
+                                        .doc(myNum)
+                                        .update({
+                                      "acceptstatus": "accepted",
+                                    });
+                                    print("callid from receving f+m" + callID);
+                                    if ((snapshot.data?.data()
+                                            as Map?)?['present_call'] ==
+                                        'voice') {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => VoiceCallZego(
+                                            userNum: myNum,
+                                            friendNum: friendNum,
+                                            callID: callID,
+                                          ),
+                                        ),
+                                      );
+                                    } else if ((snapshot.data?.data()
+                                            as Map?)?['present_call'] ==
+                                        'video') {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => VideoCallZego(
+                                            userNum: myNum,
+                                            friendNum: friendNum,
+                                            callID: callID,
+                                          ),
+                                        ),
+                                      );
+                                    } else {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => VideoChatCall(
+                                            myNum: myNum,
+                                            friendNum: friendNum,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                    // Navigator.push(
+                                    //   context,
+                                    //   MaterialPageRoute(
+                                    //     builder: (context) => VoiceCallZego(
+                                    //       userNum: myNum,
+                                    //       friendNum: friendNum,
+                                    //       callID: callID,
+                                    //     ),
+                                    //   ),
+                                    // );
+                                  },
+                                  child: Icon(Icons.call),
+                                );
+                              },
+                            ),
+                            SizedBox(
+                              width: 10,
+                            ),
                             ElevatedButton(
-                                onPressed: () {}, child: Icon(Icons.call)),
-                            ElevatedButton(
-                                onPressed: () {}, child: Icon(Icons.call_end))
+                                onPressed: () {
+                                  FirebaseFirestore.instance
+                                      .collection('o2ocalls')
+                                      .doc(myNum)
+                                      .update({
+                                    "caller": FieldValue.delete(),
+                                    "present_call": FieldValue.delete(),
+                                    "timestamp": FieldValue.delete(),
+                                    "acceptstatus": FieldValue.delete()
+                                    // Add as many fields as your document contains
+                                  }).then((value) {
+                                    // Add any additional actions after the fields are deleted
+                                  });
+                                },
+                                child: Icon(Icons.call_end))
                           ],
                         )
                       ],

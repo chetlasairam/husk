@@ -1,0 +1,30 @@
+void sendPushNotification(String token, String myNum, String msg) async {
+    print("token from sendPushNot=====" + token + "===of friend===" + myNum);
+    try {
+      await http.post(Uri.parse('https://fcm.googleapis.com/fcm/send'),
+          headers: <String, String>{
+            'Content-Type': 'application/json',
+            'Authorization':
+                'key=AAAALQ0bMBc:APA91bFw9zgoTVqYBiix-QyU3xn-rVS3vDdMQ-B4Q2xqCoeG0E88fGtuTxZQl87xAzQcA4AoT5ttXd-fRQ2zu18staiSPekzPD81HFTQ9aLKA-oqjWLngXDBVuUZJn6Wf7jvDhqJpPtU'
+          },
+          body: jsonEncode(<String, dynamic>{
+            "priority": "high",
+            "data": <String, dynamic>{
+              "click_action": "FLUTTER NOTIFICATION_CLICK",
+              "status": "done",
+              "body": "Your body",
+              "title": "Your title",
+            },
+            "notification": {
+              "title": myNum,
+              "body": msg,
+              "android_channel_id": "dbfood"
+            },
+            "to": token
+          }));
+    } catch (e) {
+      if (kDebugMode) {
+        print("error push notification");
+      }
+    }
+  }

@@ -27,9 +27,9 @@ dependencies:
   zego_uikit_prebuilt_call: ^3.7.1
   zego_express_engine: ^3.10.0
   agora_rtc_engine: ^6.2.1  
-  firebase_messaging: ^14.6.4
   cupertino_icons: ^1.0.2
   flutter_local_notifications: ^16.1.0
+  firebase_messaging: ^14.7.8
 
 dev_dependencies:
   flutter_test:

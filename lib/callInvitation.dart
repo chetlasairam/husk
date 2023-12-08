@@ -44,28 +44,31 @@ class _CallInviteState extends State<CallInvite> {
           .doc(widget.friendNum)
           .snapshots(),
       builder: (context, snapshot) {
-        // Update the state variable based on the current snapshot
-        documentExists = snapshot.hasData &&
-            snapshot.data?.data() != null &&
-            (snapshot.data?.data() as Map).isNotEmpty;
+        if (snapshot.hasData && snapshot.data!.exists) {
+          // Check if the "acceptstatus" field exists and is visible
+          var data = snapshot.data!.data() as Map<String, dynamic>;
+          var acceptStatus = data['acceptstatus'];
 
-        if (!documentExists) {
-          // Delay the pop to handle quick state changes
-          Future.delayed(Duration(milliseconds: 500), () {
-            // Check the state variable again before popping
-            if (mounted && !documentExists) {
-              Navigator.pop(context);
-            }
-          });
+          if (acceptStatus != null && acceptStatus == "true") {
+            // Navigate to VoiceCallZego screen if acceptstatus is true
+            return VoiceCallZego(
+              userNum: widget.userNum,
+              friendNum: widget.friendNum,
+              callID: '$widget.userNum_$widget.friendNum', // Set your call ID
+            );
+          }
         }
+
+        // If "acceptstatus" field is not visible, show the buttons
         return Scaffold(
           backgroundColor: Color(0xff0D5882),
           body: SafeArea(
-              child: Stack(
-            children: [
-              buttons(),
-            ],
-          )),
+            child: Stack(
+              children: [
+                buttons(),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -120,7 +123,7 @@ class _CallInviteState extends State<CallInvite> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => VoiceCallZego(
-                            callID: "${widget.userNum}_${widget.friendNum}",
+                            callID: "${widget.friendNum}_${widget.userNum}",
                             userNum: widget.userNum,
                             friendNum: widget.friendNum),
                       ),
@@ -181,6 +184,7 @@ class _CallInviteState extends State<CallInvite> {
                   "present_call": FieldValue
                       .delete(), // Replace 'field2' with your actual field name
                   "timestamp": FieldValue.delete(),
+                  "acceptstatus": FieldValue.delete()
                 }).then(
                   (value) {
                     callReject();
@@ -270,6 +274,7 @@ class _CallInviteState extends State<CallInvite> {
                     "present_call": FieldValue
                         .delete(), // Replace 'field2' with your actual field name
                     "timestamp": FieldValue.delete(),
+                    "acceptstatus": FieldValue.delete()
                     // Add as many fields as your document contains
                   }).then((value) {
                     callReject();

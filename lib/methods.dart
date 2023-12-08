@@ -2,6 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:huskkk/signInPage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
 Future<User?> signup(String phno, String pass) async {
   FirebaseAuth _auth = FirebaseAuth.instance;
@@ -13,7 +16,7 @@ Future<User?> signup(String phno, String pass) async {
     print("Successfully created");
 
     // userCrendetial.user!.updateDisplayName(phno);
-    await _firestore.collection('users').doc(_auth.currentUser!.uid).set({
+    await _firestore.collection('users').doc(phno).set({
       "name": phno,
       "email": (phno + "@gmail.com"),
       "status": "Unavalible",
@@ -37,9 +40,14 @@ Future<User?> signin(String phno, String pass) async {
 
     _firestore
         .collection('users')
-        .doc(_auth.currentUser!.uid)
+        .doc(phno)
         .get()
         .then((value) => userCredential.user!.updateDisplayName(value['name']));
+
+    String deviceToken = (await _firebaseMessaging.getToken())!;
+    await _firestore.collection('users').doc(phno).update({
+      "Token": deviceToken,
+    });
 
     return userCredential.user;
   } catch (e) {
