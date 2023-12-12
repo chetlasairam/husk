@@ -2,8 +2,8 @@
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:huskkk/homePage.dart';
 import 'package:huskkk/specificscreen.dart';
-import 'api/firebase_api.dart';
 // import 'package:flutter/services.dart';
 
 import 'splashsr.dart';
@@ -31,7 +31,7 @@ Future main() async {
 
   await Firebase.initializeApp();
   print("====Now Trying FCM done====");
-  await FirebaseApi().initNotifictions();
+
   print("====Trying FCM====");
   //SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values());
   runApp(const MyApp());
@@ -75,8 +75,9 @@ class MyApp extends StatelessWidget {
       //   ref: 3,
       // ),
       home: SplashScreen(),
+
       // home: const Test(),
-      routes: {SpecificScreen.route: (context) => SpecificScreen()},
+      routes: {SpecificScreen.route: (context) => SplashScreen()},
     );
   }
 }

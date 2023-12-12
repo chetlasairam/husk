@@ -44,22 +44,55 @@ class _CallInviteState extends State<CallInvite> {
           .doc(widget.friendNum)
           .snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.hasData && snapshot.data!.exists) {
-          // Check if the "acceptstatus" field exists and is visible
-          var data = snapshot.data!.data() as Map<String, dynamic>;
-          var acceptStatus = data['acceptstatus'];
+        documentExists = snapshot.hasData &&
+            snapshot.data?.data() != null &&
+            (snapshot.data?.data() as Map).isNotEmpty;
+        if (!documentExists) {
+          // Delay the pop to handle quick state changes
+          Future.delayed(Duration(milliseconds: 500), () {
+            // Check the state variable again before popping
+            if (mounted && !documentExists) {
+              Navigator.pop(context);
+            }
+          });
+        }
 
-          if (acceptStatus != null && acceptStatus == "true") {
-            // Navigate to VoiceCallZego screen if acceptstatus is true
-            return VoiceCallZego(
-              userNum: widget.userNum,
-              friendNum: widget.friendNum,
-              callID: '$widget.userNum_$widget.friendNum', // Set your call ID
-            );
+        if (documentExists) {
+          Map<String, dynamic>? typedata =
+              snapshot.data?.data() as Map<String, dynamic>?;
+
+          String? callType = typedata?['present_call'];
+          Map<String, dynamic>? data =
+              snapshot.data?.data() as Map<String, dynamic>?;
+
+          if (data != null &&
+              data.containsKey("acceptstatus") &&
+              data["acceptstatus"] == "accepted") {
+            var callID = '$widget.friendNum' + "_$widget.userNum";
+            if (callType == 'voice') {
+              print("typedata=======$callType");
+              return VoiceCallZego(
+                userNum: widget.userNum,
+                friendNum: widget.friendNum,
+                callID: callID,
+              );
+            } else if (callType == 'video') {
+              print("typedata=======$callType");
+              return VideoCallZego(
+                userNum: widget.userNum,
+                friendNum: widget.friendNum,
+                callID: callID,
+              );
+            } else {
+              print("typedata=======$callType");
+              return VideoChatCall(
+                myNum: widget.userNum,
+                friendNum: widget.friendNum,
+              );
+            }
           }
         }
 
-        // If "acceptstatus" field is not visible, show the buttons
         return Scaffold(
           backgroundColor: Color(0xff0D5882),
           body: SafeArea(

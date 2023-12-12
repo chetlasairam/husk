@@ -36,12 +36,12 @@ package="com.example.huskkk">
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id"
-                android:value="high_important_channel"/>
+        
         
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+            
     </application>
 </manifest>
 

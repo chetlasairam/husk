@@ -1,16 +1,19 @@
-import 'package:flutter/foundation.dart';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:http/http.dart';
 import 'package:huskkk/receiverDetailsPage.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_speed_dial/flutter_speed_dial.dart';
-import 'package:huskkk/videochatCallPage.dart';
+// import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 // import 'package:huskkk/stream_listener_widget.dart';
 
 import 'globals.dart' as globals;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:permission_handler/permission_handler.dart';
+// import 'package:permission_handler/permission_handler.dart';
 import 'package:contacts_service/contacts_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'sendNotification.dart';
 
 Future<String> getContactNameFromNumber(String phoneNumber) async {
   final Iterable<Contact> contacts = await ContactsService.getContacts();
@@ -45,6 +48,7 @@ class ChatBox extends StatefulWidget {
 
 class _ChatBoxState extends State<ChatBox> {
   String? _contactName;
+  String? friendToken;
 
   @override
   void initState() {
@@ -53,14 +57,20 @@ class _ChatBoxState extends State<ChatBox> {
   }
 
   Future<void> _loadContactName() async {
-    final contactName = await getContactNameFromNumber(widget.friendNum);
-    setState(() {
-      if (contactName == "") {
-        _contactName = widget.friendNum;
-      } else {
-        _contactName = contactName;
-      }
-    });
+    try {
+      final contactName = await getContactNameFromNumber(widget.friendNum);
+      setState(() {
+        if (contactName == "") {
+          _contactName = widget.friendNum;
+        } else {
+          _contactName = contactName;
+        }
+      });
+    } catch (e) {
+      print("Error in loading contact name: $e");
+      // Handle the error condition here
+      // You can set a default value for _contactName or show an error message
+    }
   }
 
   @override
@@ -89,19 +99,7 @@ class _ChatBoxState extends State<ChatBox> {
     globals.statusBarHeight = MediaQuery.of(context).padding.top;
     String myNum = _auth.currentUser!.displayName.toString();
     String friendNum = widget.friendNum;
-    FirebaseFirestore.instance
-        .collection('users')
-        .doc(friendNum)
-        .get()
-        .then((DocumentSnapshot documentSnapshot) {
-      if (documentSnapshot.exists) {
-        String token =
-            (documentSnapshot.data() as Map<String, dynamic>)['token'];
-        // Use the token here
-      } else {
-        print('Document does not exist on the database');
-      }
-    });
+    print("============Friend num=$friendNum");
 
     return Scaffold(
         backgroundColor: Color(0xff0D5882),
@@ -422,6 +420,41 @@ class _ChatBoxState extends State<ChatBox> {
                                             sendMessage(message);
                                           });
                                         });
+                                        /////////////////////////
+                                        try {
+                                          DocumentSnapshot friendSnapshot =
+                                              await FirebaseFirestore.instance
+                                                  .collection('users')
+                                                  .doc(friendNum)
+                                                  .get();
+
+                                          if (friendSnapshot.exists) {
+                                            Map<String, dynamic>? friendData =
+                                                friendSnapshot.data()
+                                                    as Map<String, dynamic>?;
+
+                                            if (friendData != null &&
+                                                friendData
+                                                    .containsKey('Token')) {
+                                              String? friendToken =
+                                                  friendData['Token'];
+                                              print(
+                                                  'Friend Token: $friendToken');
+                                              sendPushNotification(friendToken!,
+                                                  _contactName!, message);
+                                            } else {
+                                              print(
+                                                  'Token field not found in friend document or value is null');
+                                            }
+                                          } else {
+                                            print(
+                                                'Friend document does not exist');
+                                          }
+                                        } catch (e) {
+                                          print(
+                                              'Error retrieving friend token: $e');
+                                        }
+                                        ///////////////////////
                                       },
                                       child: Container(
                                         child: Icon(

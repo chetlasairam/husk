@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:huskkk/chatBox.dart';
 import 'package:contacts_service/contacts_service.dart';
 import 'globals.dart' as globals;
+import 'sendNotification.dart';
 
 Future<String> getContactNameFromNumber(String phoneNumber) async {
   final Iterable<Contact> contacts = await ContactsService.getContacts();
@@ -214,7 +215,7 @@ class _PatchState extends State<Patch> {
                             GestureDetector(
                               onTap: () {
                                 setupCall(widget.userNum, widget.friendNum,
-                                        "voice")
+                                        "voice", _contactName)
                                     .then((_) {
                                   setState(() {
                                     // sendMessage(message); or any other state updates
@@ -244,7 +245,7 @@ class _PatchState extends State<Patch> {
                             GestureDetector(
                               onTap: () {
                                 setupCall(widget.userNum, widget.friendNum,
-                                        "video")
+                                        "video", _contactName)
                                     .then((_) {
                                   setState(() {
                                     // sendMessage(message); or any other state updates
@@ -274,7 +275,7 @@ class _PatchState extends State<Patch> {
                             GestureDetector(
                               onTap: () {
                                 setupCall(widget.userNum, widget.friendNum,
-                                        "videochat")
+                                        "videochat", _contactName)
                                     .then((_) {
                                   setState(() {
                                     // sendMessage(message); or any other state updates
@@ -354,7 +355,7 @@ class _PatchState extends State<Patch> {
   }
 }
 
-setupCall(userNum, friendNum, msg) async {
+setupCall(userNum, friendNum, msg, _contactName) async {
   await FirebaseFirestore.instance
       .collection('o2ocalls')
       .doc(userNum)
@@ -408,6 +409,30 @@ setupCall(userNum, friendNum, msg) async {
       'timestamp': FieldValue.serverTimestamp(),
     });
   });
+  try {
+    DocumentSnapshot friendSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(friendNum)
+        .get();
+
+    if (friendSnapshot.exists) {
+      Map<String, dynamic>? friendData =
+          friendSnapshot.data() as Map<String, dynamic>?;
+
+      if (friendData != null && friendData.containsKey('Token')) {
+        String? friendToken = friendData['Token'];
+        print('Friend Token: $friendToken');
+        sendPushNotification(
+            friendToken!, _contactName!, "incoming $msg call...");
+      } else {
+        print('Token field not found in friend document or value is null');
+      }
+    } else {
+      print('Friend document does not exist');
+    }
+  } catch (e) {
+    print('Error retrieving friend token: $e');
+  }
 }
 
 class CustomClipPath extends CustomClipper<Path> {
@@ -543,63 +568,6 @@ class _MainLayerState extends State<MainLayer> {
                     ),
                   ),
                 ),
-                // Visibility(
-                //     visible: !_mediaOpen,
-                //     child: GridView.count(crossAxisCount: 3, children: [
-                //       Container(
-                //           width: globals.generalize(60),
-                //           height: globals.generalize(60),
-                //           decoration: new BoxDecoration(
-                //               borderRadius: BorderRadius.all(
-                //                 Radius.circular(5),
-                //               ),
-                //               image: new DecorationImage(
-                //                   fit: BoxFit.fill,
-                //                   image:
-                //                       AssetImage('assets/images/myPic.jpg')))),
-                //       Container(
-                //           width: globals.generalize(60),
-                //           height: globals.generalize(60),
-                //           decoration: new BoxDecoration(
-                //               borderRadius: BorderRadius.all(
-                //                 Radius.circular(5),
-                //               ),
-                //               image: new DecorationImage(
-                //                   fit: BoxFit.fill,
-                //                   image:
-                //                       AssetImage('assets/images/myPic.jpg')))),
-                //       Container(
-                //           width: globals.generalize(60),
-                //           height: globals.generalize(60),
-                //           decoration: new BoxDecoration(
-                //               borderRadius: BorderRadius.all(
-                //                 Radius.circular(5),
-                //               ),
-                //               image: new DecorationImage(
-                //                   fit: BoxFit.fill,
-                //                   image:
-                //                       AssetImage('assets/images/myPic.jpg')))),
-                //     ]
-                //         // List.generate(
-                //         //   15,
-                //         //   (index) {
-                //         //     return Padding(
-                //         //       padding: const EdgeInsets.only(right: 3.0),
-                //         //       child: Container(
-                //         //           width: globals.generalize(60),
-                //         //           height: globals.generalize(60),
-                //         //           decoration: new BoxDecoration(
-                //         //               borderRadius: BorderRadius.all(
-                //         //                 Radius.circular(5),
-                //         //               ),
-                //         //               image: new DecorationImage(
-                //         //                   fit: BoxFit.fill,
-                //         //                   image: AssetImage(
-                //         //                       'assets/images/myPic.jpg')))),
-                //         //     );
-                //         //   },
-                //         // ),
-                //         ))
                 Visibility(
                     visible: !_mediaOpen,
                     child: SizedBox(

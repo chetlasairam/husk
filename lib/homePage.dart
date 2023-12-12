@@ -291,61 +291,66 @@ class _HomePageState extends State<HomePage> {
                                     '';
                                 return ElevatedButton(
                                   onPressed: () {
-                                    var callID = '$friendNum' + "_$myNum";
-                                    FirebaseFirestore.instance
-                                        .collection('o2ocalls')
-                                        .doc(myNum)
-                                        .update({
-                                      "acceptstatus": "accepted",
-                                    });
-                                    print("callid from receving f+m" + callID);
-                                    if ((snapshot.data?.data()
-                                            as Map?)?['present_call'] ==
-                                        'voice') {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => VoiceCallZego(
-                                            userNum: myNum,
-                                            friendNum: friendNum,
-                                            callID: callID,
+                                    try {
+                                      var callID = '$friendNum' + "_$myNum";
+                                      FirebaseFirestore.instance
+                                          .collection('o2ocalls')
+                                          .doc(myNum)
+                                          .update({
+                                        "acceptstatus": "accepted",
+                                      });
+                                      print(
+                                          "callid from receving f+m" + callID);
+                                      if ((snapshot.data?.data()
+                                              as Map?)?['present_call'] ==
+                                          'voice') {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => VoiceCallZego(
+                                              userNum: myNum,
+                                              friendNum: friendNum,
+                                              callID: callID,
+                                            ),
                                           ),
-                                        ),
-                                      );
-                                    } else if ((snapshot.data?.data()
-                                            as Map?)?['present_call'] ==
-                                        'video') {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => VideoCallZego(
-                                            userNum: myNum,
-                                            friendNum: friendNum,
-                                            callID: callID,
+                                        );
+                                      } else if ((snapshot.data?.data()
+                                              as Map?)?['present_call'] ==
+                                          'video') {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => VideoCallZego(
+                                              userNum: myNum,
+                                              friendNum: friendNum,
+                                              callID: callID,
+                                            ),
                                           ),
-                                        ),
-                                      );
-                                    } else {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => VideoChatCall(
-                                            myNum: myNum,
-                                            friendNum: friendNum,
+                                        );
+                                      } else {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => VideoChatCall(
+                                              myNum: myNum,
+                                              friendNum: friendNum,
+                                            ),
                                           ),
-                                        ),
-                                      );
+                                        );
+                                      }
+                                      // Navigator.push(
+                                      //   context,
+                                      //   MaterialPageRoute(
+                                      //     builder: (context) => VoiceCallZego(
+                                      //       userNum: myNum,
+                                      //       friendNum: friendNum,
+                                      //       callID: callID,
+                                      //     ),
+                                      //   ),
+                                      // );
+                                    } catch (e) {
+                                      print("=================errorrrr$e");
                                     }
-                                    // Navigator.push(
-                                    //   context,
-                                    //   MaterialPageRoute(
-                                    //     builder: (context) => VoiceCallZego(
-                                    //       userNum: myNum,
-                                    //       friendNum: friendNum,
-                                    //       callID: callID,
-                                    //     ),
-                                    //   ),
-                                    // );
                                   },
                                   child: Icon(Icons.call),
                                 );
