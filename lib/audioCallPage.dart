@@ -78,7 +78,7 @@ class _PatchState extends State<Patch> {
                       shape: BoxShape.circle,
                       image: new DecorationImage(
                           fit: BoxFit.fill,
-                          image: AssetImage('assets/images/myPic.jpg')))),
+                          image: AssetImage('assets/images/myPic.jpeg')))),
               Padding(
                 padding: EdgeInsets.fromLTRB(
                     globals.generalize(8),

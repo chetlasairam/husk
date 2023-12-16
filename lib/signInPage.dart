@@ -180,6 +180,8 @@ class _SignInPageState extends State<SignInPage> {
                   ),
                 ),
                 style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.resolveWith(
+                      (states) => Colors.blue),
                   elevation: MaterialStateProperty.all<double>(10),
                   shadowColor: MaterialStateProperty.all<Color>(Colors.blue),
                   shape: MaterialStateProperty.all<RoundedRectangleBorder>(

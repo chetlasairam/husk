@@ -21,6 +21,36 @@ class CallInvite extends StatefulWidget {
 }
 
 class _CallInviteState extends State<CallInvite> {
+  String dpImg = "null";
+  @override
+  void initState() {
+    super.initState();
+
+    fetchUserData();
+  }
+
+  Future<void> fetchUserData() async {
+    try {
+      DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.friendNum)
+          .get();
+
+      if (documentSnapshot.exists) {
+        var data = documentSnapshot.data() as Map<String, dynamic>;
+        if (data.containsKey("myImage")) {
+          setState(() {
+            print("========");
+            dpImg = data['myImage'];
+            print("========");
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching user data: $e");
+    }
+  }
+
   void callReject() {
     Navigator.pop(context);
 
@@ -33,6 +63,10 @@ class _CallInviteState extends State<CallInvite> {
 
   @override
   Widget build(BuildContext context) {
+    int user = widget.user;
+    int ref = widget.ref;
+    String userNum = widget.userNum;
+    String friendNum = widget.friendNum;
     print("building-----------");
     globals.screenWidth = MediaQuery.of(context).size.width;
     globals.screenHeight = MediaQuery.of(context).size.height;
@@ -68,14 +102,16 @@ class _CallInviteState extends State<CallInvite> {
           if (data != null &&
               data.containsKey("acceptstatus") &&
               data["acceptstatus"] == "accepted") {
-            var callID = '$widget.friendNum' + "_$widget.userNum";
+            var callID = '${widget.userNum}_${widget.friendNum}';
             if (callType == 'voice') {
               print("typedata=======$callType");
+              print("------------------------Friendnum: $friendNum");
+              print("---------------------callerID: $callID");
+
               return VoiceCallZego(
-                userNum: widget.userNum,
-                friendNum: widget.friendNum,
-                callID: callID,
-              );
+                  userNum: widget.userNum,
+                  friendNum: widget.friendNum,
+                  callID: callID);
             } else if (callType == 'video') {
               print("typedata=======$callType");
               return VideoCallZego(
@@ -86,9 +122,9 @@ class _CallInviteState extends State<CallInvite> {
             } else {
               print("typedata=======$callType");
               return VideoChatCall(
-                myNum: widget.userNum,
-                friendNum: widget.friendNum,
-              );
+                  myNum: widget.userNum,
+                  friendNum: widget.friendNum,
+                  callID: callID);
             }
           }
         }
@@ -172,11 +208,15 @@ class _CallInviteState extends State<CallInvite> {
                       ),
                     );
                   } else {
+                    var callID = "${widget.friendNum}_${widget.userNum}";
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
                         builder: (context) => VideoChatCall(
-                            myNum: widget.userNum, friendNum: widget.friendNum),
+                          myNum: widget.userNum,
+                          friendNum: widget.friendNum,
+                          callID: callID,
+                        ),
                       ),
                     );
                   }
@@ -424,7 +464,9 @@ class _CallInviteState extends State<CallInvite> {
                       shape: BoxShape.circle,
                       image: new DecorationImage(
                           fit: BoxFit.fill,
-                          image: AssetImage('assets/images/myPic.jpg')))),
+                          image: dpImg == "null"
+                              ? AssetImage('assets/images/myPic.jpeg')
+                              : NetworkImage(dpImg) as ImageProvider))),
               Padding(
                 padding: EdgeInsets.fromLTRB(
                     globals.generalize(8),
@@ -433,7 +475,7 @@ class _CallInviteState extends State<CallInvite> {
                     globals.generalize(4)),
                 child: Center(
                     child: Text(
-                  "James",
+                  widget.friendNum,
                   style: TextStyle(
                       color: Colors.white,
                       fontSize: globals.generalize(25),

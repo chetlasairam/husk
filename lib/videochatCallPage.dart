@@ -17,17 +17,17 @@ const channel = AgoraConst.channelName;
 class VideoChatCall extends StatefulWidget {
   final String friendNum;
   final String myNum;
+  final String callID;
 
-  const VideoChatCall({
-    required this.myNum,
-    required this.friendNum,
-  });
+  const VideoChatCall(
+      {required this.myNum, required this.friendNum, required this.callID});
 
   @override
   State<VideoChatCall> createState() => _VideoChatCallState();
 }
 
 class _VideoChatCallState extends State<VideoChatCall> {
+  bool _engineReleased = false;
   // bool control = false;
   // bool decision = !false;
   bool speaker = false;
@@ -102,14 +102,15 @@ class _VideoChatCallState extends State<VideoChatCall> {
   }
 
   Future<void> endCall() async {
-    await _engine.leaveChannel();
-    _engine.destroyCustomVideoTrack(0);
-    deleteVideoChatPipe();
-    Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => HomePage(nav: 1),
-        )); // Close the current screen and go back
+    if (!_engineReleased) {
+      _engineReleased = true;
+      await _engine.leaveChannel();
+      await _engine.release();
+      // Navigate to the previous screen or perform any other necessary actions
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    }
   }
 
   void toggleMute() {
@@ -150,10 +151,11 @@ class _VideoChatCallState extends State<VideoChatCall> {
 
   void deleteVideoChatPipe() async {
     try {
+      print("============in delete");
       // Reference to the document you want to delete
       await FirebaseFirestore.instance
           .collection("o2ocalls")
-          .doc("${widget.myNum}_${widget.friendNum}")
+          .doc(widget.callID)
           .delete()
           .then((_) => {print('===========Document deleted successfully')});
     } catch (e) {
@@ -161,10 +163,57 @@ class _VideoChatCallState extends State<VideoChatCall> {
     }
   }
 
+  void deleteCallTrace(String myNum, String friendNum) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('o2ocalls')
+          .doc(myNum)
+          .update({
+        "caller": FieldValue.delete(),
+        "present_call": FieldValue.delete(),
+        "timestamp": FieldValue.delete(),
+        "acceptstatus": FieldValue.delete()
+        // Add as many fields as your document contains
+      }).then((value) {
+        // Add any additional actions after the fields are deleted
+      });
+    } catch (e) {
+      // Handle any potential errors here
+      print('Error: $e');
+    }
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('o2ocalls')
+          .doc(friendNum)
+          .update({
+        "caller": FieldValue.delete(),
+        "present_call": FieldValue.delete(),
+        "timestamp": FieldValue.delete(),
+        "acceptstatus": FieldValue.delete()
+        // Add as many fields as your document contains
+      }).then((value) {
+        // Add any additional actions after the fields are deleted
+      });
+    } catch (e) {
+      // Handle any potential errors here
+      print('Error: $e');
+    }
+  }
+
   TextEditingController _controller = TextEditingController();
   String _message = '';
   ValueNotifier<bool> showGestureDetector = ValueNotifier<bool>(false);
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  @override
+  void dispose() {
+    if (!_engineReleased) {
+      _engine.release();
+      _engineReleased = true;
+    }
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     globals.screenWidth = MediaQuery.of(context).size.width;
@@ -214,34 +263,34 @@ class _VideoChatCallState extends State<VideoChatCall> {
           SizedBox(
             width: globals.generalize(45),
             height: globals.generalize(45),
-            child: ElevatedButton(
+            child: GestureDetector(
                 //style: ElevatedButton.styleFrom({}),
-                onPressed: () {
+                onTap: () {
                   setState(() {
                     drawOpen = !drawOpen;
                   });
                 },
-                child: Icon(
-                  drawOpen
-                      ? Icons.keyboard_arrow_down_outlined
-                      : Icons.arrow_forward_ios_rounded,
-                  color: Colors.black,
-                  size: drawOpen
-                      ? globals.generalize(20)
-                      : globals.generalize(15),
-                ),
-                style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.resolveWith<Color>(
-                    (Set<MaterialState> states) {
-                      return Colors.white;
-                    },
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(globals.generalize(50)),
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.2), // Shadow color
+                        spreadRadius: 2,
+                        blurRadius: 9,
+                        offset: Offset(0, 0),
+                      ),
+                    ],
                   ),
-                  elevation: MaterialStateProperty.all<double>(3),
-                  shadowColor: MaterialStateProperty.all<Color>(Colors.white),
-                  shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                    RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(50.0),
-                    ),
+                  child: Icon(
+                    drawOpen
+                        ? Icons.keyboard_arrow_down_outlined
+                        : Icons.arrow_forward_ios_rounded,
+                    color: Colors.black,
+                    size: drawOpen
+                        ? globals.generalize(20)
+                        : globals.generalize(15),
                   ),
                 )),
           ),
@@ -253,75 +302,75 @@ class _VideoChatCallState extends State<VideoChatCall> {
                 Padding(
                   padding: EdgeInsets.only(top: globals.generalize(4)),
                   child: SizedBox(
-                    width: globals.generalize(45),
-                    height: globals.generalize(45),
-                    child: ElevatedButton(
+                      width: globals.generalize(45),
+                      height: globals.generalize(45),
+                      child: GestureDetector(
                         //style: ElevatedButton.styleFrom({}),
-                        onPressed: () {
+                        onTap: () {
                           setState(() {
                             speaker = !speaker;
                             toggleSpeaker();
                           });
                         },
-                        child: Icon(
-                          (speaker == false)
-                              ? Icons.volume_up
-                              : Icons.volume_off,
-                          color: Colors.grey,
-                          size: globals.generalize(20),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius:
+                                BorderRadius.circular(globals.generalize(50)),
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey
+                                    .withOpacity(0.2), // Shadow color
+                                spreadRadius: 2,
+                                blurRadius: 9,
+                                offset: Offset(0, 0),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            (speaker == false)
+                                ? Icons.volume_up
+                                : Icons.volume_off,
+                            color: Colors.grey,
+                            size: globals.generalize(20),
+                          ),
                         ),
-                        style: ButtonStyle(
-                          backgroundColor:
-                              MaterialStateProperty.resolveWith<Color>(
-                            (Set<MaterialState> states) {
-                              return Colors.white;
-                            },
-                          ),
-                          elevation: MaterialStateProperty.all<double>(3),
-                          shadowColor:
-                              MaterialStateProperty.all<Color>(Colors.white),
-                          shape:
-                              MaterialStateProperty.all<RoundedRectangleBorder>(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(50.0),
-                            ),
-                          ),
-                        )),
-                  ),
+                      )),
                 ),
                 Padding(
                   padding: EdgeInsets.only(top: globals.generalize(4)),
                   child: SizedBox(
                     width: globals.generalize(45),
                     height: globals.generalize(45),
-                    child: ElevatedButton(
+                    child: GestureDetector(
                         //style: ElevatedButton.styleFrom({}),
-                        onPressed: () {
+                        onTap: () {
                           setState(() {
                             mute = !mute;
                             toggleMute();
                           });
                         },
-                        child: Icon(
-                          (mute == false) ? Icons.mic_outlined : Icons.mic_off,
-                          color: Colors.grey,
-                          size: globals.generalize(20),
-                        ),
-                        style: ButtonStyle(
-                          backgroundColor:
-                              MaterialStateProperty.resolveWith<Color>(
-                            (Set<MaterialState> states) {
-                              return Colors.white;
-                            },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius:
+                                BorderRadius.circular(globals.generalize(50)),
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey
+                                    .withOpacity(0.2), // Shadow color
+                                spreadRadius: 2,
+                                blurRadius: 9,
+                                offset: Offset(0, 0),
+                              ),
+                            ],
                           ),
-                          elevation: MaterialStateProperty.all<double>(3),
-                          shadowColor:
-                              MaterialStateProperty.all<Color>(Colors.white),
-                          shape:
-                              MaterialStateProperty.all<RoundedRectangleBorder>(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(50.0),
-                            ),
+                          child: Icon(
+                            (mute == false)
+                                ? Icons.mic_outlined
+                                : Icons.mic_off,
+                            color: Colors.grey,
+                            size: globals.generalize(20),
                           ),
                         )),
                   ),
@@ -329,75 +378,73 @@ class _VideoChatCallState extends State<VideoChatCall> {
                 Padding(
                   padding: EdgeInsets.only(top: globals.generalize(4)),
                   child: SizedBox(
-                    width: globals.generalize(45),
-                    height: globals.generalize(45),
-                    child: ElevatedButton(
+                      width: globals.generalize(45),
+                      height: globals.generalize(45),
+                      child: GestureDetector(
                         //style: ElevatedButton.styleFrom({}),
-                        onPressed: () {
+                        onTap: () {
                           setState(() {
                             _isFrontCamera = !_isFrontCamera;
                             toggleCamera();
                           });
                         },
-                        child: Icon(
-                          Icons.flip_camera_ios_outlined,
-                          color: Colors.grey,
-                          size: globals.generalize(20),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius:
+                                BorderRadius.circular(globals.generalize(50)),
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey
+                                    .withOpacity(0.2), // Shadow color
+                                spreadRadius: 2,
+                                blurRadius: 9,
+                                offset: Offset(0, 0),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.flip_camera_ios_outlined,
+                            color: Colors.grey,
+                            size: globals.generalize(20),
+                          ),
                         ),
-                        style: ButtonStyle(
-                          backgroundColor:
-                              MaterialStateProperty.resolveWith<Color>(
-                            (Set<MaterialState> states) {
-                              return Colors.white;
-                            },
-                          ),
-                          elevation: MaterialStateProperty.all<double>(3),
-                          shadowColor:
-                              MaterialStateProperty.all<Color>(Colors.white),
-                          shape:
-                              MaterialStateProperty.all<RoundedRectangleBorder>(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(50.0),
-                            ),
-                          ),
-                        )),
-                  ),
+                      )),
                 ),
                 Padding(
                   padding: EdgeInsets.only(top: globals.generalize(4)),
                   child: SizedBox(
                     width: globals.generalize(45),
                     height: globals.generalize(45),
-                    child: ElevatedButton(
+                    child: GestureDetector(
                         //style: ElevatedButton.styleFrom({}),
-                        onPressed: () {
+                        onTap: () {
                           setState(() {
                             camOnOff = !camOnOff;
                             toggleCameraOff();
                           });
                         },
-                        child: Icon(
-                          (camOnOff == true)
-                              ? Icons.videocam_rounded
-                              : Icons.videocam_off_sharp,
-                          color: Colors.grey,
-                          size: globals.generalize(20),
-                        ),
-                        style: ButtonStyle(
-                          backgroundColor:
-                              MaterialStateProperty.resolveWith<Color>(
-                            (Set<MaterialState> states) {
-                              return Colors.white;
-                            },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius:
+                                BorderRadius.circular(globals.generalize(50)),
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey
+                                    .withOpacity(0.2), // Shadow color
+                                spreadRadius: 2,
+                                blurRadius: 9,
+                                offset: Offset(0, 0),
+                              ),
+                            ],
                           ),
-                          elevation: MaterialStateProperty.all<double>(3),
-                          shadowColor:
-                              MaterialStateProperty.all<Color>(Colors.white),
-                          shape:
-                              MaterialStateProperty.all<RoundedRectangleBorder>(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(50.0),
-                            ),
+                          child: Icon(
+                            (camOnOff == true)
+                                ? Icons.videocam_rounded
+                                : Icons.videocam_off_sharp,
+                            color: Colors.grey,
+                            size: globals.generalize(20),
                           ),
                         )),
                   ),
@@ -407,37 +454,41 @@ class _VideoChatCallState extends State<VideoChatCall> {
                   child: SizedBox(
                     width: globals.generalize(45),
                     height: globals.generalize(45),
-                    child: ElevatedButton(
-                        //style: ElevatedButton.styleFrom({}),
-                        onPressed: () {
-                          setState(() {
-                            endCall();
-                          });
-                        },
+                    child: GestureDetector(
+                      //style: ElevatedButton.styleFrom({}),
+                      onTap: () {
+                        print("=========deleting");
+                        deleteVideoChatPipe();
+                        print("-----------deleted");
+                        setState(() {
+                          deleteCallTrace(widget.myNum, widget.friendNum);
+                          endCall();
+                        });
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius:
+                              BorderRadius.circular(globals.generalize(50)),
+                          color: Colors.red,
+                          boxShadow: [
+                            BoxShadow(
+                              color:
+                                  Colors.grey.withOpacity(0.2), // Shadow color
+                              spreadRadius: 2,
+                              blurRadius: 9,
+                              offset: Offset(0, 0),
+                            ),
+                          ],
+                        ),
                         child: Icon(
                           Icons.call_end,
                           color: Colors.white,
                           size: globals.generalize(20),
                         ),
-                        style: ButtonStyle(
-                          backgroundColor:
-                              MaterialStateProperty.resolveWith<Color>(
-                            (Set<MaterialState> states) {
-                              return Colors.red;
-                            },
-                          ),
-                          elevation: MaterialStateProperty.all<double>(3),
-                          shadowColor:
-                              MaterialStateProperty.all<Color>(Colors.red),
-                          shape:
-                              MaterialStateProperty.all<RoundedRectangleBorder>(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(50.0),
-                            ),
-                          ),
-                        )),
+                      ),
+                    ),
                   ),
-                ),
+                )
               ]),
             ),
           )
@@ -477,7 +528,7 @@ class _VideoChatCallState extends State<VideoChatCall> {
                       child: StreamBuilder(
                           stream: FirebaseFirestore.instance
                               .collection("o2ocalls")
-                              .doc("${widget.myNum}_${widget.friendNum}")
+                              .doc(widget.callID)
                               .collection('chats')
                               .orderBy("date", descending: true)
                               .snapshots(),
@@ -573,7 +624,7 @@ class _VideoChatCallState extends State<VideoChatCall> {
                               _controller.clear();
                               await FirebaseFirestore.instance
                                   .collection("o2ocalls")
-                                  .doc("${widget.myNum}_${widget.friendNum}")
+                                  .doc(widget.callID)
                                   .collection('chats')
                                   .add({
                                 "senderId": widget.myNum,
@@ -661,8 +712,7 @@ class _VideoChatCallState extends State<VideoChatCall> {
             //shape: BoxShape.circle,
             image: new DecorationImage(
                 fit: BoxFit.fill,
-                image: NetworkImage(
-                    "https://images.unsplash.com/photo-1581562444313-98be7b621dc2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MjB8fGRvZyUyMHBvcnRyYWl0fGVufDB8fDB8fHww&w=1000&q=80"))),
+                image: AssetImage('assets/images/lady1.jpeg'))),
 
         ///My screen container
         child: _remoteVideo(),
@@ -676,8 +726,7 @@ class _VideoChatCallState extends State<VideoChatCall> {
             color: Colors.yellow,
             image: new DecorationImage(
                 fit: BoxFit.fill,
-                image: NetworkImage(
-                    "https://images.unsplash.com/photo-1543055484-ac8fe612bf31?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8Y2F0JTIwcG9ydHJhaXR8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=600&q=60"))),
+                image: AssetImage('assets/images/lady2.jpeg'))),
         child: _localVideo(),
       ),
     ]);
@@ -743,7 +792,7 @@ Widget patch() {
                     shape: BoxShape.circle,
                     image: new DecorationImage(
                         fit: BoxFit.fill,
-                        image: AssetImage('assets/images/myPic.jpg')))),
+                        image: AssetImage('assets/images/myPic.jpeg')))),
             Padding(
               padding: EdgeInsets.fromLTRB(
                   globals.generalize(8),

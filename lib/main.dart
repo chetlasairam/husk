@@ -30,10 +30,7 @@ Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp();
-  print("====Now Trying FCM done====");
 
-  print("====Trying FCM====");
-  //SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values());
   runApp(const MyApp());
 }
 

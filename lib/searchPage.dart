@@ -322,7 +322,7 @@ class _ChatCardState extends State<ChatCard> {
                     shape: BoxShape.circle,
                     image: DecorationImage(
                       fit: BoxFit.fill,
-                      image: AssetImage('assets/images/myPic.jpg'),
+                      image: AssetImage('assets/images/myPic.jpeg'),
                     ),
                   ),
                 ),

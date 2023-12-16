@@ -233,6 +233,8 @@ class _SignUpState extends State<SignUp> {
                   ),
                 ),
                 style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.resolveWith(
+                      (states) => Colors.blue),
                   elevation: MaterialStateProperty.all<double>(10),
                   shadowColor: MaterialStateProperty.all<Color>(Colors.blue),
                   shape: MaterialStateProperty.all<RoundedRectangleBorder>(

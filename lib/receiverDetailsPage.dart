@@ -85,11 +85,34 @@ class Patch extends StatefulWidget {
 
 class _PatchState extends State<Patch> {
   String? _contactName;
-
+  String dpImg = "null";
   @override
   void initState() {
     super.initState();
     _loadContactName();
+    fetchUserData();
+  }
+
+  Future<void> fetchUserData() async {
+    try {
+      DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.friendNum)
+          .get();
+
+      if (documentSnapshot.exists) {
+        var data = documentSnapshot.data() as Map<String, dynamic>;
+        if (data.containsKey("myImage")) {
+          setState(() {
+            print("========");
+            dpImg = data['myImage'];
+            print("========");
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching user data: $e");
+    }
   }
 
   Future<void> _loadContactName() async {
@@ -101,6 +124,26 @@ class _PatchState extends State<Patch> {
         _contactName = contactName;
       }
     });
+  }
+
+  Future<void> deleteAllChats(String callID) async {
+    try {
+      String documentID = callID;
+
+      QuerySnapshot chatsSnapshot = await FirebaseFirestore.instance
+          .collection('o2ocalls')
+          .doc(documentID)
+          .collection('chats')
+          .get();
+
+      for (QueryDocumentSnapshot doc in chatsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+
+      print('All documents in "chats" subcollection deleted.');
+    } catch (e) {
+      print('Error deleting documents: $e');
+    }
   }
 
   Future<String> getContactName(String phoneNumber) async {
@@ -160,10 +203,13 @@ class _PatchState extends State<Patch> {
                                   border:
                                       Border.all(color: Colors.white, width: 3),
                                   shape: BoxShape.circle,
-                                  image: const DecorationImage(
+                                  image: DecorationImage(
                                       fit: BoxFit.fill,
-                                      image: AssetImage(
-                                          'assets/images/myPic.jpg')))),
+                                      image: dpImg == "null"
+                                          ? AssetImage(
+                                              'assets/images/myPic.jpeg')
+                                          : NetworkImage(dpImg)
+                                              as ImageProvider))),
                         ),
                         Padding(
                           padding: EdgeInsets.fromLTRB(
@@ -209,6 +255,7 @@ class _PatchState extends State<Patch> {
                           ),
                         ),
                         Expanded(child: SizedBox()),
+
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -277,10 +324,10 @@ class _PatchState extends State<Patch> {
                                 setupCall(widget.userNum, widget.friendNum,
                                         "videochat", _contactName)
                                     .then((_) {
-                                  setState(() {
-                                    // sendMessage(message); or any other state updates
-                                  });
-
+                                  var callID =
+                                      "${widget.userNum}_${widget.friendNum}";
+                                  print("========>>>>>>>>$callID");
+                                  deleteAllChats(callID);
                                   Navigator.push(
                                       context,
                                       MaterialPageRoute(
@@ -301,6 +348,7 @@ class _PatchState extends State<Patch> {
                             ),
                           ],
                         ),
+
                         SizedBox(
                           height: globals.generalize(20),
                         )
@@ -508,7 +556,7 @@ class _MainLayerState extends State<MainLayer> {
                   globals.generalize(8),
                   globals.generalize(4),
                   globals.generalize(8),
-                  globals.generalize(4)),
+                  globals.generalize(2)),
               child: Column(children: [
                 Row(
                   children: [
@@ -550,8 +598,8 @@ class _MainLayerState extends State<MainLayer> {
                         15,
                         (index) {
                           return Padding(
-                            padding: const EdgeInsets.only(right: 3.0),
-                            child: Container(
+                              padding: const EdgeInsets.only(right: 3.0),
+                              child: Container(
                                 width: globals.generalize(60),
                                 height: globals.generalize(60),
                                 decoration: new BoxDecoration(
@@ -561,8 +609,8 @@ class _MainLayerState extends State<MainLayer> {
                                     image: new DecorationImage(
                                         fit: BoxFit.fill,
                                         image: AssetImage(
-                                            'assets/images/myPic.jpg')))),
-                          );
+                                            'assets/images/myPic.jpeg'))),
+                              ));
                         },
                       )),
                     ),
@@ -600,7 +648,7 @@ class _MainLayerState extends State<MainLayer> {
                                                 return child;
                                               }))),
                                       child: Hero(
-                                        tag: 'img',
+                                        tag: 'img$index',
                                         child: Container(
                                             width: globals.generalize(60),
                                             height: globals.generalize(60),
@@ -611,7 +659,7 @@ class _MainLayerState extends State<MainLayer> {
                                                 image: new DecorationImage(
                                                     fit: BoxFit.fill,
                                                     image: AssetImage(
-                                                        'assets/images/myPic.jpg')))),
+                                                        'assets/images/myPic.jpeg')))),
                                       ),
                                     ),
                                   );
@@ -1365,7 +1413,7 @@ class HeroWidgetDetail extends StatelessWidget {
                   ),
                   image: new DecorationImage(
                       fit: BoxFit.fitWidth,
-                      image: AssetImage('assets/images/myPic.jpg')))),
+                      image: AssetImage('assets/images/myPic.jpeg')))),
         ),
       )),
     );

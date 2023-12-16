@@ -56,30 +56,30 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    requestPermission();
+    // requestPermission();
   }
 
-  void requestPermission() async {
-    print("In requestPermission========");
-    FirebaseMessaging messaging = FirebaseMessaging.instance;
-    NotificationSettings settings = await messaging.requestPermission(
-      alert: true,
-      announcement: false,
-      badge: true,
-      carPlay: false,
-      criticalAlert: false,
-      provisional: false,
-      sound: true,
-    );
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('User granted permission');
-    } else if (settings.authorizationStatus ==
-        AuthorizationStatus.provisional) {
-      print('User granted provisional permission');
-    } else {
-      print('User declined or has not accepted permission');
-    }
-  }
+  // void requestPermission() async {
+  //   print("In requestPermission========");
+  //   FirebaseMessaging messaging = FirebaseMessaging.instance;
+  //   NotificationSettings settings = await messaging.requestPermission(
+  //     alert: true,
+  //     announcement: false,
+  //     badge: true,
+  //     carPlay: false,
+  //     criticalAlert: false,
+  //     provisional: false,
+  //     sound: true,
+  //   );
+  //   if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+  //     print('User granted permission');
+  //   } else if (settings.authorizationStatus ==
+  //       AuthorizationStatus.provisional) {
+  //     print('User granted provisional permission');
+  //   } else {
+  //     print('User declined or has not accepted permission');
+  //   }
+  // }
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -107,6 +107,25 @@ class _HomePageState extends State<HomePage> {
         });
       }
     });
+  }
+
+  Future<String> getContactNameFromNumber(String phoneNumber) async {
+    final Iterable<Contact> contacts = await ContactsService.getContacts();
+
+    for (final Contact contact in contacts) {
+      if (contact.phones != null) {
+        for (final Item phone in contact.phones!) {
+          final normalizedPhoneNumber =
+              phone.value?.replaceAll(RegExp(r'[^0-9]'), '');
+
+          if (normalizedPhoneNumber == phoneNumber) {
+            return contact.displayName ?? '';
+          }
+        }
+      }
+    }
+
+    return ''; // Return an empty string if no matching contact is found
   }
 
   @override
@@ -259,10 +278,28 @@ class _HomePageState extends State<HomePage> {
                               .doc(myNum)
                               .snapshots(),
                           builder: (context, snapshot) {
-                            String name =
-                                (snapshot.data?.data() as Map?)?['caller'] ??
-                                    '';
-                            return Text(name);
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return CircularProgressIndicator(); // or any other loading indicator
+                            } else if (snapshot.hasError) {
+                              return Text('Error: ${snapshot.error}');
+                            } else {
+                              String name =
+                                  (snapshot.data?.data() as Map?)?['caller'] ??
+                                      '';
+                              return FutureBuilder<String>(
+                                future: getContactNameFromNumber(name),
+                                builder: (context, nameSnapshot) {
+                                  if (nameSnapshot.connectionState ==
+                                      ConnectionState.done) {
+                                    return Text(nameSnapshot.data ?? '');
+                                  } else {
+                                    return Text(
+                                        name); // or any other loading indicator
+                                  }
+                                },
+                              );
+                            }
                           },
                         ),
                         StreamBuilder<DocumentSnapshot>(
@@ -304,6 +341,9 @@ class _HomePageState extends State<HomePage> {
                                       if ((snapshot.data?.data()
                                               as Map?)?['present_call'] ==
                                           'voice') {
+                                        print(
+                                            "---------------------callerID_home: $callID");
+
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
@@ -334,6 +374,7 @@ class _HomePageState extends State<HomePage> {
                                             builder: (context) => VideoChatCall(
                                               myNum: myNum,
                                               friendNum: friendNum,
+                                              callID: callID,
                                             ),
                                           ),
                                         );
@@ -451,11 +492,12 @@ class ChatCard extends StatefulWidget {
 
 class _ChatCardState extends State<ChatCard> {
   String? _contactName;
-
+  String dpImg = "null";
   @override
   void initState() {
     super.initState();
     _loadContactName();
+    fetchUserData();
   }
 
   Future<void> _loadContactName() async {
@@ -468,6 +510,28 @@ class _ChatCardState extends State<ChatCard> {
           _contactName = contactName;
         }
       });
+    }
+  }
+
+  Future<void> fetchUserData() async {
+    try {
+      DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.phoneNumber)
+          .get();
+
+      if (documentSnapshot.exists) {
+        var data = documentSnapshot.data() as Map<String, dynamic>;
+        if (data.containsKey("myImage")) {
+          setState(() {
+            print("========");
+            dpImg = data['myImage'];
+            print("========");
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching user data: $e");
     }
   }
 
@@ -515,8 +579,9 @@ class _ChatCardState extends State<ChatCard> {
                               shape: BoxShape.circle,
                               image: new DecorationImage(
                                   fit: BoxFit.fill,
-                                  image:
-                                      AssetImage('assets/images/myPic.jpg')))),
+                                  image: dpImg == "null"
+                                      ? AssetImage('assets/images/myPic.jpeg')
+                                      : NetworkImage(dpImg) as ImageProvider))),
                     ),
                     SizedBox(
                       width: globals.generalize(5),
@@ -524,7 +589,7 @@ class _ChatCardState extends State<ChatCard> {
                     Center(
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(
-                            0, globals.generalize(8), 0, globals.generalize(8)),
+                            0, globals.generalize(8), 0, globals.generalize(5)),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
@@ -633,10 +698,21 @@ class _PatchState extends State<Patch> {
                             Navigator.push(context,
                                 MaterialPageRoute(builder: (_) => Search()));
                           } else if (menu == 3) {
-                            Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) => SettingPage()));
+                            User? user = FirebaseAuth.instance.currentUser;
+                            String username = "";
+                            if (user != null) {
+                              username = user.displayName ?? "No username";
+                              String email = user.email ?? "No email";
+                              print('Username: $username');
+                              print('Email: $email');
+                            } else {
+                              print('No user currently logged in.');
+                            }
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => SettingPage(username: username),
+                              ),
+                            );
                           }
                         },
                         shape: RoundedRectangleBorder(

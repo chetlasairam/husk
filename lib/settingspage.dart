@@ -1,8 +1,20 @@
+import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+
 import 'globals.dart' as globals;
 import 'package:flutter/material.dart';
 import 'package:flutter_switch/flutter_switch.dart';
+import 'package:path/path.dart' as path;
 
 class SettingPage extends StatefulWidget {
+  final String username;
+  const SettingPage({
+    Key? key,
+    required this.username,
+  });
   @override
   State<SettingPage> createState() => _SettingPageState();
 }
@@ -14,11 +26,82 @@ class _SettingPageState extends State<SettingPage> {
   bool notif_status = false;
   bool g_notif_status = false;
   bool vibr_status = false;
+
+  File? _image;
+  final picker = ImagePicker();
+
+  Future getImage() async {
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
+
+      // Call the function to upload the image to Firebase Storage
+      await uploadImageToFirebase();
+    } else {
+      print('No image selected.');
+    }
+  }
+
+  Future uploadImageToFirebase() async {
+    try {
+      Reference firebaseStorageRef = FirebaseStorage.instance
+          .ref()
+          .child('images/${path.basename(_image!.path)}');
+      UploadTask uploadTask = firebaseStorageRef.putFile(_image!);
+      await uploadTask.whenComplete(() async {
+        // Get the download URL after uploading to Firebase Storage
+        String downloadURL = await firebaseStorageRef.getDownloadURL();
+        print('Image uploaded to Firebase: $downloadURL');
+        await firebaseStorageRef.getDownloadURL().then((downloadURL) {
+          FirebaseFirestore.instance
+              .collection('users')
+              .doc(widget.username)
+              .set({'myImage': downloadURL}, SetOptions(merge: true));
+        });
+      });
+    } catch (e) {
+      print('Error uploading image to Firebase: $e');
+    }
+  }
+
+  String dpImg = "null"; // Initialize the variable outside the build method
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch user data here
+    fetchUserData();
+  }
+
+  Future<void> fetchUserData() async {
+    try {
+      DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.username)
+          .get();
+
+      if (documentSnapshot.exists) {
+        var data = documentSnapshot.data() as Map<String, dynamic>;
+        if (data.containsKey("myImage")) {
+          setState(() {
+            dpImg = data['myImage'];
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching user data: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     globals.screenWidth = MediaQuery.of(context).size.width;
     globals.screenHeight = MediaQuery.of(context).size.height;
     globals.statusBarHeight = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       backgroundColor: Color(0xff0D5882),
       body: SafeArea(
@@ -48,48 +131,55 @@ class _SettingPageState extends State<SettingPage> {
                           globals.generalize(90) - globals.generalize(60 / 2),
                     ),
                     Container(
-                      width: globals.generalize(60),
-                      height: globals.generalize(60),
-                      decoration: new BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.white,
-                            Colors.white,
-                            Colors.white,
-                            Colors.white,
-                            Colors.white,
-                            Color(0xff0086D1),
-                            Color(0xff0086D1),
-                            Color(0xff0086D1),
-                            Color(0xff0086D1),
-                            Color(0xff0086D1),
-                          ],
+                        width: globals.generalize(60),
+                        height: globals.generalize(60),
+                        decoration: new BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.white,
+                              Colors.white,
+                              Colors.white,
+                              Colors.white,
+                              Colors.white,
+                              Color(0xff0086D1),
+                              Color(0xff0086D1),
+                              Color(0xff0086D1),
+                              Color(0xff0086D1),
+                              Color(0xff0086D1),
+                            ],
+                          ),
+                          //border: Border.all(color: Colors.white, width: 3),
+                          shape: BoxShape.circle,
+                          // image: new DecorationImage(
+                          //     fit: BoxFit.fill,
+                          //     image: AssetImage('assets/images/myPic.jpeg'))
                         ),
-                        //border: Border.all(color: Colors.white, width: 3),
-                        shape: BoxShape.circle,
-                        // image: new DecorationImage(
-                        //     fit: BoxFit.fill,
-                        //     image: AssetImage('assets/images/myPic.jpg'))
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(globals.generalize(3)),
-                        child: Container(
-                          width: globals.generalize(54),
-                          height: globals.generalize(54),
-                          decoration: new BoxDecoration(
-                              //border: Border.all(color: Colors.white, width: 3),
-                              shape: BoxShape.circle,
-                              image: new DecorationImage(
-                                  fit: BoxFit.fill,
-                                  image:
-                                      AssetImage('assets/images/myPic.jpg'))),
-                        ),
-                      ),
-                    ),
+                        child: GestureDetector(
+                          child: Padding(
+                            padding: EdgeInsets.all(globals.generalize(3)),
+                            child: Container(
+                              width: globals.generalize(54),
+                              height: globals.generalize(54),
+                              decoration: BoxDecoration(
+                                  //border: Border.all(color: Colors.white, width: 3),
+                                  shape: BoxShape.circle,
+                                  image: DecorationImage(
+                                      fit: BoxFit.fill,
+                                      image: dpImg == "null"
+                                          ? AssetImage(
+                                              'assets/images/myPic.jpeg')
+                                          : NetworkImage(dpImg)
+                                              as ImageProvider)),
+                            ),
+                          ),
+                          onTap: () {
+                            getImage();
+                          },
+                        )),
                     Text(
-                      "James",
+                      widget.username,
                       style: TextStyle(
                           fontSize: globals.generalize(25),
                           color: Colors.black,

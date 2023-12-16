@@ -49,11 +49,35 @@ class ChatBox extends StatefulWidget {
 class _ChatBoxState extends State<ChatBox> {
   String? _contactName;
   String? friendToken;
+  String dpImg = "null";
 
   @override
   void initState() {
     super.initState();
     _loadContactName();
+    fetchUserData();
+  }
+
+  Future<void> fetchUserData() async {
+    try {
+      DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.friendNum)
+          .get();
+
+      if (documentSnapshot.exists) {
+        var data = documentSnapshot.data() as Map<String, dynamic>;
+        if (data.containsKey("myImage")) {
+          setState(() {
+            print("========");
+            dpImg = data['myImage'];
+            print("========");
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching user data: $e");
+    }
   }
 
   Future<void> _loadContactName() async {
@@ -159,8 +183,11 @@ class _ChatBoxState extends State<ChatBox> {
                                     shape: BoxShape.circle,
                                     image: new DecorationImage(
                                         fit: BoxFit.fill,
-                                        image: AssetImage(
-                                            'assets/images/myPic.jpg')))),
+                                        image: dpImg == "null"
+                                            ? AssetImage(
+                                                'assets/images/myPic.jpeg')
+                                            : NetworkImage(dpImg)
+                                                as ImageProvider))),
                           ),
                           Text(
                             _contactName ?? widget.friendNum,
@@ -365,96 +392,103 @@ class _ChatBoxState extends State<ChatBox> {
                                     visible: showGestureDetector.value,
                                     child: GestureDetector(
                                       onTap: () async {
-                                        String message = _controller.text;
-                                        _controller.clear();
-                                        await FirebaseFirestore.instance
-                                            .collection('chats')
-                                            .doc(myNum)
-                                            .collection('messages')
-                                            .doc(friendNum)
-                                            .collection('chats')
-                                            .add({
-                                          "senderId": myNum,
-                                          "receiverId": friendNum,
-                                          "message": message,
-                                          "type": "text",
-                                          "date": DateTime.now(),
-                                        }).then((value) {
-                                          FirebaseFirestore.instance
-                                              .collection('chats')
-                                              .doc(myNum)
-                                              .collection('messages')
-                                              .doc(friendNum)
-                                              .set({
-                                            'last_msg': message,
-                                            'timestamp':
-                                                FieldValue.serverTimestamp(),
-                                          });
-                                        });
-
-                                        await FirebaseFirestore.instance
-                                            .collection('chats')
-                                            .doc(friendNum)
-                                            .collection('messages')
-                                            .doc(myNum)
-                                            .collection("chats")
-                                            .add({
-                                          "senderId": myNum,
-                                          "receiverId": friendNum,
-                                          "message": message,
-                                          "type": "text",
-                                          "date": DateTime.now(),
-                                        }).then((value) {
-                                          FirebaseFirestore.instance
-                                              .collection('chats')
-                                              .doc(friendNum)
-                                              .collection('messages')
-                                              .doc(myNum)
-                                              .set({
-                                            "last_msg": message,
-                                            'timestamp':
-                                                FieldValue.serverTimestamp(),
-                                          });
-                                        }).then((_) {
-                                          setState(() {
-                                            sendMessage(message);
-                                          });
-                                        });
-                                        /////////////////////////
                                         try {
-                                          DocumentSnapshot friendSnapshot =
-                                              await FirebaseFirestore.instance
-                                                  .collection('users')
-                                                  .doc(friendNum)
-                                                  .get();
+                                          String message = _controller.text;
+                                          _controller.clear();
+                                          await FirebaseFirestore.instance
+                                              .collection('chats')
+                                              .doc(myNum)
+                                              .collection('messages')
+                                              .doc(friendNum)
+                                              .collection('chats')
+                                              .add({
+                                            "senderId": myNum,
+                                            "receiverId": friendNum,
+                                            "message": message,
+                                            "type": "text",
+                                            "date": DateTime.now(),
+                                          }).then((value) {
+                                            FirebaseFirestore.instance
+                                                .collection('chats')
+                                                .doc(myNum)
+                                                .collection('messages')
+                                                .doc(friendNum)
+                                                .set({
+                                              'last_msg': message,
+                                              'timestamp':
+                                                  FieldValue.serverTimestamp(),
+                                            });
+                                          });
 
-                                          if (friendSnapshot.exists) {
-                                            Map<String, dynamic>? friendData =
-                                                friendSnapshot.data()
-                                                    as Map<String, dynamic>?;
+                                          await FirebaseFirestore.instance
+                                              .collection('chats')
+                                              .doc(friendNum)
+                                              .collection('messages')
+                                              .doc(myNum)
+                                              .collection("chats")
+                                              .add({
+                                            "senderId": myNum,
+                                            "receiverId": friendNum,
+                                            "message": message,
+                                            "type": "text",
+                                            "date": DateTime.now(),
+                                          }).then((value) {
+                                            FirebaseFirestore.instance
+                                                .collection('chats')
+                                                .doc(friendNum)
+                                                .collection('messages')
+                                                .doc(myNum)
+                                                .set({
+                                              "last_msg": message,
+                                              'timestamp':
+                                                  FieldValue.serverTimestamp(),
+                                            });
+                                          }).then((_) {
+                                            setState(() {
+                                              sendMessage(message);
+                                            });
+                                          });
+                                          /////////////////////////
+                                          try {
+                                            DocumentSnapshot friendSnapshot =
+                                                await FirebaseFirestore.instance
+                                                    .collection('users')
+                                                    .doc(friendNum)
+                                                    .get();
 
-                                            if (friendData != null &&
-                                                friendData
-                                                    .containsKey('Token')) {
-                                              String? friendToken =
-                                                  friendData['Token'];
-                                              print(
-                                                  'Friend Token: $friendToken');
-                                              sendPushNotification(friendToken!,
-                                                  _contactName!, message);
+                                            if (friendSnapshot.exists) {
+                                              Map<String, dynamic>? friendData =
+                                                  friendSnapshot.data()
+                                                      as Map<String, dynamic>?;
+
+                                              if (friendData != null &&
+                                                  friendData
+                                                      .containsKey('Token')) {
+                                                String? friendToken =
+                                                    friendData['Token'];
+                                                print(
+                                                    'Friend Token: $friendToken');
+                                                sendPushNotification(
+                                                    friendToken!,
+                                                    _contactName!,
+                                                    message);
+                                              } else {
+                                                print(
+                                                    'Token field not found in friend document or value is null');
+                                              }
                                             } else {
                                               print(
-                                                  'Token field not found in friend document or value is null');
+                                                  'Friend document does not exist');
                                             }
-                                          } else {
+                                          } catch (e) {
                                             print(
-                                                'Friend document does not exist');
+                                                'Error retrieving friend token: $e');
                                           }
+                                          ///////////////////////
                                         } catch (e) {
                                           print(
-                                              'Error retrieving friend token: $e');
+                                              "=========it is stucking here: $e");
                                         }
-                                        ///////////////////////
                                       },
                                       child: Container(
                                         child: Icon(
@@ -465,7 +499,6 @@ class _ChatBoxState extends State<ChatBox> {
                                       ),
                                     ),
                                   ),
-
                                   Visibility(
                                     visible: !showGestureDetector.value,
                                     child: Padding(
@@ -482,100 +515,6 @@ class _ChatBoxState extends State<ChatBox> {
                                       ),
                                     ),
                                   ),
-
-                                  // Visibility(
-                                  //   visible: !showGestureDetector.value,
-                                  //   child: Padding(
-                                  //       padding: EdgeInsets.fromLTRB(0, 0, 0, 0),
-                                  //       child: SpeedDial(
-                                  //         direction: SpeedDialDirection.up,
-                                  //         icon: Icons.add_circle_outline_rounded,
-                                  //         elevation: 0,
-                                  //         iconTheme: IconThemeData(
-                                  //             size: globals.generalize(28)),
-                                  //         //animatedIcon: AnimatedIcons.add_event,
-                                  //         buttonSize: Size(globals.generalize(41),
-                                  //             globals.generalize(41)),
-                                  //         overlayOpacity: 0,
-                                  //         backgroundColor: Colors.white,
-                                  //         foregroundColor: Colors.grey,
-                                  //         childPadding:
-                                  //             EdgeInsets.fromLTRB(0, 3, 0, 2),
-                                  //         childrenButtonSize: Size(
-                                  //             globals.generalize(35),
-                                  //             globals.generalize(35)),
-                                  // children: [
-                                  // SpeedDialChild(
-                                  //     child: Icon(
-                                  //   Icons.upload_file_outlined,
-                                  //   size: globals.generalize(25),
-                                  //   color: Colors.grey,
-                                  // )),
-                                  // SpeedDialChild(
-                                  //     child: Icon(
-                                  //   Icons.location_history_outlined,
-                                  //   size: globals.generalize(25),
-                                  //   color: Colors.grey,
-                                  // )),
-                                  // SpeedDialChild(
-                                  //     child: Icon(
-                                  //   Icons.my_location_rounded,
-                                  //   size: globals.generalize(25),
-                                  //   color: Colors.grey,
-                                  // )),
-                                  // SpeedDialChild(
-                                  //     child: Icon(
-                                  //   Icons.image_outlined,
-                                  //   size: globals.generalize(25),
-                                  //   color: Colors.grey,
-                                  // )),
-                                  // SpeedDialChild(
-                                  //     child: Icon(
-                                  //   Icons.camera_alt_outlined,
-                                  //   size: globals.generalize(25),
-                                  //   color: Colors.grey,
-                                  // ))
-                                  // ],
-                                  // )
-
-                                  // Icon(
-                                  //   Icons.add_circle_outline_rounded,
-                                  //   size: globals.generalize(25),
-                                  //   color: Colors.grey,
-                                  // ),
-                                  //       ),
-                                  // ),
-                                  // Padding(
-                                  //   padding: EdgeInsets.fromLTRB(
-                                  //       0,
-                                  //       globals.generalize(0),
-                                  //       0,
-                                  //       globals.generalize(0)),
-                                  //   child:
-                                  //       // Container(
-                                  //       //   //color: Colors.purple,
-                                  //       //   height: globals.generalize(30),
-                                  //       //   width: globals.generalize(30),
-                                  //       //   decoration: BoxDecoration(
-                                  //       //     color: Colors.green[700],
-                                  //       //     borderRadius: BorderRadius.all(
-                                  //       //       Radius.circular(100),
-                                  //       //     ),
-                                  //       //   ),
-                                  //       //   child:
-                                  //       Visibility(
-                                  //     visible: true,
-                                  //     child: Container(
-                                  //       //color: Color.fromARGB(255, 189, 50, 8),
-                                  //       child: Icon(
-                                  //         Icons.arrow_circle_right_rounded,
-                                  //         size: globals.generalize(40),
-                                  //         color: Colors.green,
-                                  //       ),
-                                  //     ),
-                                  //   ),
-                                  // ),
-                                  //),
                                 ],
                               ),
                             ),
