@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:huskkk/callInvitation.dart';
 import 'package:huskkk/chatBox.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:huskkk/methods.dart';
+import 'package:huskkk/namesave.dart';
 import 'package:huskkk/searchPage.dart';
 import 'package:huskkk/settingspage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,6 +18,56 @@ import 'globals.dart' as globals;
 import 'package:contacts_service/contacts_service.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
+
+Future<bool> checkContactExists(String phoneNumber) async {
+  try {
+    // Open the file in read mode
+    File file = File('contact.txt');
+    if (!(await file.exists())) {
+      // If the file doesn't exist, return false
+      return false;
+    }
+
+    // Read the contents of the file
+    List<String> lines = await file.readAsLines();
+
+    // Iterate through the lines to check if the phoneNumber exists
+    for (String line in lines) {
+      if (line.contains('"$phoneNumber"')) {
+        // If the phoneNumber exists in the file, return true
+        return true;
+      }
+    }
+
+    // If the phoneNumber doesn't exist in the file, fetch from device contacts
+    PermissionStatus status = await Permission.contacts.request();
+    if (!status.isGranted) {
+      return false; // Return false if permission is not granted
+    }
+
+    final Iterable<Contact> contacts = await ContactsService.getContacts();
+
+    for (final Contact contact in contacts) {
+      if (contact.phones != null) {
+        for (final Item phone in contact.phones!) {
+          final normalizedPhoneNumber =
+              phone.value?.replaceAll(RegExp(r'[^0-9]'), '');
+
+          if (normalizedPhoneNumber == phoneNumber) {
+            return true; // Contact found in device contacts
+          }
+        }
+      }
+    }
+
+    // If contact not found in device contacts, return false
+    return false;
+  } catch (e) {
+    // Handle exceptions, for example, file not found or permission issues
+    print('Error occurred while checking contact: $e');
+    return false;
+  }
+}
 
 Future<String> getContactNameFromNumber(String phoneNumber) async {
   // Request contacts permission
@@ -56,47 +109,10 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // requestPermission();
   }
-
-  // void requestPermission() async {
-  //   print("In requestPermission========");
-  //   FirebaseMessaging messaging = FirebaseMessaging.instance;
-  //   NotificationSettings settings = await messaging.requestPermission(
-  //     alert: true,
-  //     announcement: false,
-  //     badge: true,
-  //     carPlay: false,
-  //     criticalAlert: false,
-  //     provisional: false,
-  //     sound: true,
-  //   );
-  //   if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-  //     print('User granted permission');
-  //   } else if (settings.authorizationStatus ==
-  //       AuthorizationStatus.provisional) {
-  //     print('User granted provisional permission');
-  //   } else {
-  //     print('User declined or has not accepted permission');
-  //   }
-  // }
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // List<Widget> documentWidgets = [];
-
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   if (widget.nav != 1) {
-  //     Future.delayed(Duration.zero, () {
-  //       Navigator.push(
-  //         context,
-  //         MaterialPageRoute(builder: (context) => CallInvite(ref: widget.nav)),
-  //       );
-  //     });
-  //   }
-  // }
   bool showButton = false;
   void updateButtonVisibility(bool isVisible) {
     Future.microtask(() {
@@ -109,24 +125,24 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  Future<String> getContactNameFromNumber(String phoneNumber) async {
-    final Iterable<Contact> contacts = await ContactsService.getContacts();
+  // Future<String> getContactNameFromNumber(String phoneNumber) async {
+  //   final Iterable<Contact> contacts = await ContactsService.getContacts();
 
-    for (final Contact contact in contacts) {
-      if (contact.phones != null) {
-        for (final Item phone in contact.phones!) {
-          final normalizedPhoneNumber =
-              phone.value?.replaceAll(RegExp(r'[^0-9]'), '');
+  //   for (final Contact contact in contacts) {
+  //     if (contact.phones != null) {
+  //       for (final Item phone in contact.phones!) {
+  //         final normalizedPhoneNumber =
+  //             phone.value?.replaceAll(RegExp(r'[^0-9]'), '');
 
-          if (normalizedPhoneNumber == phoneNumber) {
-            return contact.displayName ?? '';
-          }
-        }
-      }
-    }
+  //         if (normalizedPhoneNumber == phoneNumber) {
+  //           return contact.displayName ?? '';
+  //         }
+  //       }
+  //     }
+  //   }
 
-    return ''; // Return an empty string if no matching contact is found
-  }
+  //   return ''; // Return an empty string if no matching contact is found
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -145,13 +161,24 @@ class _HomePageState extends State<HomePage> {
               Patch(),
               Column(
                 children: [
+                  // ElevatedButton(
+                  //     onPressed: () {
+                  //       Navigator.push(
+                  //           context,
+                  //           MaterialPageRoute(
+                  //               builder: (_) => Namesave(
+                  //                     phno: myNum,
+                  //                   )));
+                  //     },
+                  //     child: Container(
+                  //       child: Text("Name"),
+                  //     )),
                   Container(height: globals.generalize(90)),
                   Container(
                     height: globals.screenHeight -
                         globals.generalize(90) -
                         globals.statusBarHeight,
                     width: globals.screenWidth,
-                    //color: Colors.red,
                     child: StreamBuilder(
                       stream: FirebaseFirestore.instance
                           .collection('chats')
@@ -165,52 +192,60 @@ class _HomePageState extends State<HomePage> {
                           print('Total documents: ${documents?.length}');
 
                           return ListView.builder(
-                              itemCount: snapshot.data.docs.length,
-                              itemBuilder: (context, index) {
-                                var docId = snapshot.data.docs[index].id;
-                                var lastMsg =
-                                    snapshot.data.docs[index]['last_msg'];
-                                var lastMsgTime =
-                                    snapshot.data.docs[index]['timestamp'];
-                                if (lastMsgTime != null) {
-                                  Timestamp timestamp = lastMsgTime;
-                                  DateTime dateTime = timestamp.toDate();
-                                  DateFormat formatter = DateFormat('HH:mm');
-                                  String formattedTime =
-                                      formatter.format(dateTime);
-                                  print(
-                                      "MESSAGE TIME:" + lastMsgTime.toString());
-                                  return ChatCard(
-                                    phoneNumber: docId,
-                                    lastMsg: lastMsg,
-                                    lastMsgTime: formattedTime,
-                                  );
-                                }
-                                return null;
-                              });
-                          // SingleChildScrollView(
-                          //   child: Column(
-                          //     children: documents?.map((doc) {
-                          //           final docId = doc.id;
+                            itemCount: snapshot.data.docs.length,
+                            itemBuilder: (context, index) {
+                              var docId = snapshot.data.docs[index].id;
+                              var lastMsg =
+                                  snapshot.data.docs[index]['last_msg'];
+                              var lastMsgTime =
+                                  snapshot.data.docs[index]['timestamp'];
 
-                          //           final lastMsg = doc['lastmsg'];
-                          //           final timestamp = doc['timestamp'];
+                              if (lastMsgTime != null) {
+                                Timestamp timestamp = lastMsgTime;
+                                DateTime dateTime = timestamp.toDate();
+                                DateFormat formatter = DateFormat('HH:mm');
+                                String formattedTime =
+                                    formatter.format(dateTime);
+                                print("MESSAGE TIME:" + lastMsgTime.toString());
 
-                          //           return ChatCard(
-                          //             phoneNumber: docId,
-                          //             lastMsg: lastMsg,
-                          //             lastMsgTime: timestamp,
-                          //           ); // Replace with your desired widget
+                                return FutureBuilder<DocumentSnapshot>(
+                                  future: FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(docId)
+                                      .get(),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return ChatCard(
+                                        phoneNumber: docId,
+                                        lastMsg: lastMsg,
+                                        lastMsgTime: formattedTime,
+                                        name: docId,
+                                        dpImg: "",
+                                      );
+                                    } else if (snapshot.hasError) {
+                                      return Text('Error: ${snapshot.error}');
+                                    } else {
+                                      String name =
+                                          snapshot.data?.get('username') ?? "";
+                                      String dpImg =
+                                          snapshot.data?.get('myImage') ?? "";
+                                      return ChatCard(
+                                          phoneNumber: docId,
+                                          lastMsg: lastMsg,
+                                          lastMsgTime: formattedTime,
+                                          name:
+                                              (name.isNotEmpty) ? name : docId,
+                                          dpImg:
+                                              (dpImg.isNotEmpty) ? dpImg : "");
+                                    }
+                                  },
+                                );
+                              }
 
-                          //           // You can also use ListTile for a more comprehensive display
-                          //           // return ListTile(
-                          //           //   title: Text(docId),
-                          //           //   // Add other properties or widgets as needed
-                          //           // );
-                          //         }).toList() ??
-                          //         [],
-                          //   ),
-                          // );
+                              return Container();
+                            },
+                          );
                         } else if (snapshot.hasError) {
                           return Text('Error: ${snapshot.error}');
                         } else {
@@ -225,6 +260,7 @@ class _HomePageState extends State<HomePage> {
                       },
                     ),
                   ),
+
                   // Container(
                   //   height: globals.screenHeight -
                   //       globals.generalize(90) -
@@ -447,14 +483,14 @@ class _HomePageState extends State<HomePage> {
           child: FittedBox(
             child: FloatingActionButton(
                 onPressed: () {
-                  setState(() {
-                    print("=======================================");
+                  // setState(() {
+                  //   print("=======================================");
 
-                    print(_auth.currentUser);
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => Search()));
-                    print("========================================");
-                  });
+                  //   print(_auth.currentUser);
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => Search()));
+                  print("========================================");
+                  // });
                 },
                 backgroundColor: Colors.white,
                 elevation: 5,
@@ -479,28 +515,32 @@ class ChatCard extends StatefulWidget {
   final String phoneNumber;
   final String lastMsg;
   final String lastMsgTime;
+  final String name;
+  final String dpImg;
 
-  const ChatCard({
-    // required this.name,
-    required this.phoneNumber,
-    required this.lastMsg,
-    required this.lastMsgTime,
-  });
+  const ChatCard(
+      {
+      // required this.name,
+      required this.phoneNumber,
+      required this.lastMsg,
+      required this.lastMsgTime,
+      required this.name,
+      required this.dpImg});
   @override
   State<ChatCard> createState() => _ChatCardState();
 }
 
 class _ChatCardState extends State<ChatCard> {
   String? _contactName;
-  String dpImg = "null";
+  // String dpImg = "null";
   @override
   void initState() {
     super.initState();
     _loadContactName();
-    fetchUserData();
+    // fetchUserData();
   }
 
-  Future<void> _loadContactName() async {
+  _loadContactName() async {
     final contactName = await getContactNameFromNumber(widget.phoneNumber);
     if (mounted) {
       setState(() {
@@ -513,37 +553,38 @@ class _ChatCardState extends State<ChatCard> {
     }
   }
 
-  Future<void> fetchUserData() async {
-    try {
-      DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.phoneNumber)
-          .get();
+  // Future<void> fetchUserData() async {
+  //   try {
+  //     DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
+  //         .collection('users')
+  //         .doc(widget.phoneNumber)
+  //         .get();
 
-      if (documentSnapshot.exists) {
-        var data = documentSnapshot.data() as Map<String, dynamic>;
-        if (data.containsKey("myImage")) {
-          setState(() {
-            print("========");
-            dpImg = data['myImage'];
-            print("========");
-          });
-        }
-      }
-    } catch (e) {
-      print("Error fetching user data: $e");
-    }
-  }
+  //     if (documentSnapshot.exists) {
+  //       var data = documentSnapshot.data() as Map<String, dynamic>;
+  //       if (data.containsKey("myImage")) {
+  //         setState(() {
+  //           print("========");
+  //           dpImg = data['myImage'];
+  //           print("========");
+  //         });
+  //       }
+  //     }
+  //   } catch (e) {
+  //     print("Error fetching user data: $e");
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.push(
+      onTap: () => Navigator.pushReplacement(
           context,
           MaterialPageRoute(
               builder: (_) => ChatBox(
                     // name: widget.name,
                     friendNum: widget.phoneNumber,
+                    name: widget.name,
                   ))),
       child: Column(
         children: [
@@ -579,9 +620,10 @@ class _ChatCardState extends State<ChatCard> {
                               shape: BoxShape.circle,
                               image: new DecorationImage(
                                   fit: BoxFit.fill,
-                                  image: dpImg == "null"
+                                  image: widget.dpImg == ""
                                       ? AssetImage('assets/images/myPic.jpeg')
-                                      : NetworkImage(dpImg) as ImageProvider))),
+                                      : NetworkImage(widget.dpImg)
+                                          as ImageProvider))),
                     ),
                     SizedBox(
                       width: globals.generalize(5),
@@ -595,7 +637,7 @@ class _ChatCardState extends State<ChatCard> {
                           mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
                             Text(
-                              _contactName ?? widget.phoneNumber,
+                              widget.name,
                               style: TextStyle(
                                   fontSize: globals.generalize(15),
                                   color: Colors.black,
@@ -695,7 +737,7 @@ class _PatchState extends State<Patch> {
                     child: PopupMenuButton(
                         onSelected: (int menu) {
                           if (menu == 2) {
-                            Navigator.push(context,
+                            Navigator.pushReplacement(context,
                                 MaterialPageRoute(builder: (_) => Search()));
                           } else if (menu == 3) {
                             User? user = FirebaseAuth.instance.currentUser;

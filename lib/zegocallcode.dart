@@ -6,6 +6,7 @@ import 'package:huskkk/constants.dart';
 import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
 
 void deleteCallTrace(String myNum, String friendNum) async {
+  print("in ================== Deleteeeeee");
   try {
     await FirebaseFirestore.instance.collection('o2ocalls').doc(myNum).update({
       "caller": FieldValue.delete(),
@@ -105,6 +106,7 @@ class VideoCallZego extends StatelessWidget {
           Navigator.of(context).pop();
 
           // Add short delay
+          print("Now calling Delete==============");
           Future.delayed(Duration(milliseconds: 100), () {
             deleteCallTrace(userNum, friendNum);
             print("Call screen popped");

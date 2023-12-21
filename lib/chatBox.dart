@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart';
+import 'package:huskkk/homePage.dart';
 import 'package:huskkk/receiverDetailsPage.dart';
 import 'package:flutter/material.dart';
 // import 'package:flutter_speed_dial/flutter_speed_dial.dart';
@@ -35,11 +36,11 @@ Future<String> getContactNameFromNumber(String phoneNumber) async {
 }
 
 class ChatBox extends StatefulWidget {
-  // final String name;
+  final String name;
   final String friendNum;
 
   const ChatBox({
-    // required this.name,
+    required this.name,
     required this.friendNum,
   });
   @override
@@ -145,7 +146,8 @@ class _ChatBoxState extends State<ChatBox> {
                   children: [
                     // StreamListenerWidget(),
                     GestureDetector(
-                      onTap: () => Navigator.pop(context),
+                      onTap: () => Navigator.pushReplacement(context,
+                          MaterialPageRoute(builder: (_) => HomePage(nav: 1))),
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(globals.generalize(8),
                             globals.generalize(8), 0, globals.generalize(8)),
@@ -164,7 +166,8 @@ class _ChatBoxState extends State<ChatBox> {
                                 builder: (_) => ReceiverDetails(
                                     userNum:
                                         _auth.currentUser!.displayName ?? '',
-                                    friendNum: friendNum)));
+                                    friendNum: friendNum,
+                                    name: widget.name)));
                       },
                       child: Row(
                         children: [
@@ -190,7 +193,7 @@ class _ChatBoxState extends State<ChatBox> {
                                                 as ImageProvider))),
                           ),
                           Text(
-                            _contactName ?? widget.friendNum,
+                            widget.name,
                             style: TextStyle(
                                 color: Colors.white,
                                 fontSize: globals.generalize(18),

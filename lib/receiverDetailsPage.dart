@@ -29,12 +29,13 @@ Future<String> getContactNameFromNumber(String phoneNumber) async {
 class ReceiverDetails extends StatefulWidget {
   final String userNum;
   final String friendNum;
+  final String name;
 
-  const ReceiverDetails({
-    super.key,
-    required this.userNum,
-    required this.friendNum,
-  });
+  const ReceiverDetails(
+      {super.key,
+      required this.userNum,
+      required this.friendNum,
+      required this.name});
   @override
   _ReceiverDetailsState createState() => _ReceiverDetailsState();
 }
@@ -55,9 +56,9 @@ class _ReceiverDetailsState extends State<ReceiverDetails> {
             child: Column(
               children: [
                 Patch(
-                  userNum: widget.userNum,
-                  friendNum: widget.friendNum,
-                ),
+                    userNum: widget.userNum,
+                    friendNum: widget.friendNum,
+                    name: widget.name),
                 MainLayer(
                   friendNum: widget.friendNum,
                 )
@@ -73,12 +74,13 @@ class _ReceiverDetailsState extends State<ReceiverDetails> {
 class Patch extends StatefulWidget {
   final String userNum;
   final String friendNum;
+  final String name;
 
-  const Patch({
-    super.key,
-    required this.userNum,
-    required this.friendNum,
-  });
+  const Patch(
+      {super.key,
+      required this.userNum,
+      required this.friendNum,
+      required this.name});
   @override
   _PatchState createState() => _PatchState();
 }
@@ -246,7 +248,8 @@ class _PatchState extends State<Patch> {
 
                             ///////////////////////
                             child: Text(
-                              _contactName ?? widget.friendNum,
+                              widget.name,
+                              // _contactName ?? widget.friendNum,
                               style: TextStyle(
                                   color: Colors.white,
                                   fontSize: globals.generalize(18),

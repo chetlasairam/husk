@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:huskkk/chatBox.dart';
+import 'package:huskkk/homePage.dart';
 import 'globals.dart' as globals;
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -10,27 +12,11 @@ class Search extends StatefulWidget {
 }
 
 class _SearchState extends State<Search> {
-  final FocusNode _textFocusNode = FocusNode();
-  final TextEditingController _textEditingController =
-      TextEditingController(); // Added TextEditingController
+  final TextEditingController _textEditingController = TextEditingController();
 
-  List<Contact>? _contacts;
-  List<Contact>? _filteredContacts; // Added filtered contacts list
+  var _contacts;
+  var _filteredContacts;
   PermissionStatus? _permissionStatus;
-  // List<Widget> _myWidget = [
-  //   ChatCard(
-  //     name: "James",
-  //     phoneNumber: "1234567890",
-  //   ),
-  //   ChatCard(
-  //     name: "Jamessss",
-  //     phoneNumber: "99393939",
-  //   ),
-  //   ChatCard(
-  //     name: "sai",
-  //     phoneNumber: "7342614",
-  //   ),
-  // ];
 
   @override
   void initState() {
@@ -65,15 +51,40 @@ class _SearchState extends State<Search> {
   }
 
   Future<void> fetchContacts() async {
-    final Iterable<Contact> contacts = await ContactsService.getContacts();
-    if (mounted) {
-      setState(() {
-        _contacts = contacts.toList();
-        _filteredContacts =
-            _contacts; // Initialize filtered contacts with all contacts
-      });
+    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+    try {
+      QuerySnapshot<Map<String, dynamic>> snapshot =
+          await _firestore.collection('users').get();
+
+      var contacts = [];
+
+      for (var doc in snapshot.docs) {
+        String contactName = doc[
+            'username']; // Assuming 'username' is the field for contact name
+        String phoneNumber =
+            doc['name']; // Assuming 'displayname' is the field for phone number
+
+        var contactInfo = {
+          'name': contactName,
+          'phoneNumber': phoneNumber,
+        };
+
+        contacts.add(contactInfo);
+      }
+
+      if (mounted) {
+        setState(() {
+          _contacts = contacts;
+          print(contacts);
+          _filteredContacts = _contacts!.toList();
+        });
+      }
+
+      filterContacts(_textEditingController.text); // Apply initial filtering
+    } catch (e) {
+      print('Error fetching contacts: $e');
     }
-    filterContacts(_textEditingController.text); // Apply initial filtering
   }
 
   void filterContacts(String filterText) {
@@ -98,55 +109,43 @@ class _SearchState extends State<Search> {
   Widget _buildContactsList() {
     if (_permissionStatus == PermissionStatus.denied ||
         _permissionStatus == PermissionStatus.permanentlyDenied) {
-      // Request permission when denied or permanently denied
-      requestContactsPermission();
+      requestContactsPermission(); // Move permission request here
 
-      return Column(
-        children: [
-          ListTile(
-            title: Text(
-              _permissionStatus == PermissionStatus.denied
-                  ? 'Contacts permission denied.'
-                  : 'Contacts permission permanently denied.',
-            ),
-            subtitle:
-                Text('Please enable contacts permission in app settings.'),
-          ),
-        ],
-      );
+      return _buildPermissionDeniedWidget();
     } else if (_contacts == null) {
-      return SizedBox(
-        height: 24,
-        width: 24,
-        child: Center(child: CircularProgressIndicator()),
-      );
+      return Center(child: CircularProgressIndicator());
     } else if (_contacts!.isEmpty) {
-      return ListTile(
-        title: Text('No contacts found.'),
-      );
+      return Center(child: Text('No contacts found.'));
     } else {
+      print("Contacts: $_contacts");
       return ListView.builder(
-        itemCount: _filteredContacts!.length, // Use filtered contacts
+        itemCount: _filteredContacts?.length ?? 0,
         itemBuilder: (BuildContext context, int index) {
-          final Contact contact =
-              _filteredContacts![index]; // Use filtered contacts
+          final eachcontact = _filteredContacts![index];
           return ChatCard(
-            name: contact.displayName ?? "",
-            phoneNumber: contact.phones?.isNotEmpty == true
-                ? contact.phones!.first.value ?? ''
+            name: eachcontact["name"] ?? "",
+            phoneNumber: eachcontact["phoneNumber"]?.isNotEmpty == true
+                ? eachcontact["phoneNumber"] ?? ''
                 : '',
           );
-          // ListTile(
-          //   title: Text(contact.displayName ?? ''),
-          //   subtitle: Text(
-          //     contact.phones?.isNotEmpty == true
-          //         ? contact.phones!.first.value ?? ''
-          //         : '',
-          //   ),
-          // );
         },
       );
     }
+  }
+
+  Widget _buildPermissionDeniedWidget() {
+    return Column(
+      children: [
+        ListTile(
+          title: Text(
+            _permissionStatus == PermissionStatus.denied
+                ? 'Contacts permission denied.'
+                : 'Contacts permission permanently denied.',
+          ),
+          subtitle: Text('Please enable contacts permission in app settings.'),
+        ),
+      ],
+    );
   }
 
   @override
@@ -179,7 +178,10 @@ class _SearchState extends State<Search> {
                         EdgeInsets.fromLTRB(0, 0, globals.generalize(8), 0),
                     child: Row(children: [
                       GestureDetector(
-                        onTap: () => Navigator.pop(context),
+                        onTap: () => Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => HomePage(nav: 1))),
                         child: Padding(
                           padding: EdgeInsets.fromLTRB(globals.generalize(4), 0,
                               globals.generalize(4), 0),
@@ -239,18 +241,7 @@ class _SearchState extends State<Search> {
               Expanded(
                 child: Container(
                   color: Colors.white,
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: Expanded(child: _buildContactsList()),
-                  ),
-                  // ListView(shrinkWrap: true, children: <Widget>[
-                  //   Column(
-                  //     mainAxisSize: MainAxisSize.min,
-                  //     children: _myWidget.map((wid) {
-                  //       return wid;
-                  //     }).toList(),
-                  //   ),
-                  // ]),
+                  child: _buildContactsList(),
                 ),
               ),
             ],
@@ -261,7 +252,7 @@ class _SearchState extends State<Search> {
   }
 }
 
-class ChatCard extends StatefulWidget {
+class ChatCard extends StatelessWidget {
   final String name;
   final String phoneNumber;
 
@@ -271,21 +262,17 @@ class ChatCard extends StatefulWidget {
   });
 
   @override
-  State<ChatCard> createState() => _ChatCardState();
-}
-
-class _ChatCardState extends State<ChatCard> {
-  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => ChatBox(
-                    // name: widget.name,
-                    friendNum:
-                        widget.phoneNumber.replaceAll(RegExp(r'[^0-9]'), ''),
-                  ))),
+      onTap: () => Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatBox(
+            name: name,
+            friendNum: phoneNumber.replaceAll(RegExp(r'[^0-9]'), ''),
+          ),
+        ),
+      ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           globals.generalize(12),
@@ -343,7 +330,7 @@ class _ChatCardState extends State<ChatCard> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        widget.name,
+                        name,
                         style: TextStyle(
                           fontSize: globals.generalize(15),
                           color: Colors.black,

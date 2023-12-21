@@ -3,18 +3,19 @@ import 'package:huskkk/methods.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:huskkk/namesave.dart';
 import 'globals.dart' as globals;
 import 'signInPage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class SignUp extends StatefulWidget {
+class Namesave extends StatefulWidget {
+  final String phno;
+  const Namesave({super.key, required this.phno});
   @override
-  State<SignUp> createState() => _SignUpState();
+  State<Namesave> createState() => _NamesaveState();
 }
 
-class _SignUpState extends State<SignUp> {
+class _NamesaveState extends State<Namesave> {
   void showToast() {
     Fluttertoast.showToast(
       msg: 'Wrong Credentials',
@@ -31,11 +32,8 @@ class _SignUpState extends State<SignUp> {
 
   bool isLoading = false;
 
-  bool _isObscurePwd = false;
-  bool _isObscureCPwd = false;
-  final TextEditingController _phno = TextEditingController();
-  final TextEditingController _pass = TextEditingController();
-  final TextEditingController _cpass = TextEditingController();
+  final TextEditingController _name = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
     globals.screenWidth = MediaQuery.of(context).size.width;
@@ -60,7 +58,7 @@ class _SignUpState extends State<SignUp> {
                     children: [
                       Patch(),
                       Stack(
-                        children: [CircleLeft(), CircleRight(), MainLayer()],
+                        children: [MainLayer()],
                       )
 
                       // buttons()
@@ -99,66 +97,16 @@ class _SignUpState extends State<SignUp> {
         child: Column(
           children: [
             TextFormField(
-              keyboardType: TextInputType.number,
               inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
                 new LengthLimitingTextInputFormatter(10),
               ],
-              controller: _phno,
+              controller: _name,
               decoration: InputDecoration(
-                labelText: 'Phone No.',
+                labelText: 'Name',
                 labelStyle: TextStyle(
                     fontSize: 15,
                     color: Colors.black,
                     fontFamily: "FredokaOne"),
-              ),
-            ),
-            TextField(
-              obscureText: _isObscurePwd,
-              inputFormatters: [
-                new LengthLimitingTextInputFormatter(10),
-              ],
-              controller: _pass,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                labelStyle: TextStyle(
-                    fontSize: 15,
-                    color: Colors.black,
-                    fontFamily: "FredokaOne"),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _isObscurePwd ? Icons.visibility : Icons.visibility_off,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _isObscurePwd = !_isObscurePwd;
-                    });
-                  },
-                ),
-              ),
-            ),
-            TextField(
-              obscureText: _isObscureCPwd,
-              inputFormatters: [
-                new LengthLimitingTextInputFormatter(10),
-              ],
-              controller: _cpass,
-              decoration: InputDecoration(
-                labelText: 'Confirm Password',
-                labelStyle: TextStyle(
-                    fontSize: 15,
-                    color: Colors.black,
-                    fontFamily: "FredokaOne"),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _isObscureCPwd ? Icons.visibility : Icons.visibility_off,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _isObscureCPwd = !_isObscureCPwd;
-                    });
-                  },
-                ),
               ),
             ),
           ],
@@ -177,61 +125,31 @@ class _SignUpState extends State<SignUp> {
             width: 150,
             height: 50,
             child: ElevatedButton(
-                onPressed: () {
-                  if (_phno.text.isNotEmpty &&
-                      _pass.text.isNotEmpty &&
-                      _cpass.text.isNotEmpty &&
-                      _pass.text == _cpass.text) {
+                onPressed: () async {
+                  if (_name.text.isNotEmpty) {
                     setState(() {
                       isLoading = true;
-                    });
-
-                    signup(_phno.text, _pass.text).then((user) {
-                      if (user != null) {
-                        user.updateDisplayName(_phno.text).then((_) {
-                          print('Profile Updated');
-                        });
-                        setState(() {
-                          isLoading = false;
-                        });
-                        print("SignUp successful");
-                        collectionReference
-                            .add({_phno.text: user.uid}).then((documentRef) {
-                          print(
-                              'Data appended successfully with ID: ${documentRef.id}');
-                        }).catchError((error) {
-                          print('Error appending data: $error');
-                        });
-                        Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => Namesave(
-                                      phno: _phno.text,
-                                    )));
-                      } else {
-                        print("SignUp Failed===");
-                        setState(() {
-                          isLoading = false;
-                        });
-                        Fluttertoast.showToast(
-                          msg: "Account already exists",
-                          toastLength: Toast.LENGTH_SHORT,
-                          gravity: ToastGravity.BOTTOM,
-                          timeInSecForIosWeb: 1,
-                          backgroundColor: Colors.red,
-                          textColor: Colors.white,
-                        );
-                      }
                     });
                   } else {
                     showToast();
                     print("Please enter credentials");
                   }
+                  FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+                  print("Name saved");
+
+                  // userCrendetial.user!.updateDisplayName(phno);
+                  await _firestore.collection('users').doc(widget.phno).update({
+                    "username": _name.text,
+                    "myImage":
+                        "https://firebasestorage.googleapis.com/v0/b/huskkk-729af.appspot.com/o/images%2F4ed5fd13-9d7d-4a31-8004-b38a824fe6c0.jpg?alt=media&token=c02f5a57-a45d-4ad5-a12e-01dd691bd0ee"
+                  }).then((value) => Navigator.pushReplacement(context,
+                      MaterialPageRoute(builder: (_) => HomePage(nav: 1))));
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Text(
-                    "Sign Up",
+                    "Save",
                     style: TextStyle(
                         fontSize: 20,
                         color: Colors.white,
@@ -253,33 +171,6 @@ class _SignUpState extends State<SignUp> {
           SizedBox(
             height: 20,
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                "Alreary have an account?",
-                style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.black,
-                    fontFamily: "FredokaOne"),
-              ),
-              GestureDetector(
-                child: Text(
-                  "Sign in",
-                  style: TextStyle(
-                      decoration: TextDecoration.underline,
-                      fontSize: 15,
-                      color: Colors.black,
-                      fontFamily: "FredokaOne"),
-                ),
-                onTap: () => Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => SignInPage()),
-                  (Route<dynamic> route) => false,
-                ),
-              ),
-            ],
-          )
         ],
       ),
     );
@@ -341,38 +232,6 @@ class Patch extends StatelessWidget {
         ),
       ),
       clipper: CustomClipPath(),
-    );
-  }
-}
-
-class CircleLeft extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: globals.screenWidth,
-      height: globals.screenHeight -
-          globals.generalize(200) -
-          globals.statusBarHeight,
-      //color: Colors.green,
-      child: CustomPaint(
-        painter: DrawCircle1(),
-      ),
-    );
-  }
-}
-
-class CircleRight extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: globals.screenWidth,
-      height: globals.screenHeight -
-          globals.generalize(200) -
-          globals.statusBarHeight,
-      //color: Colors.green,
-      child: CustomPaint(
-        painter: DrawCircle2(),
-      ),
     );
   }
 }

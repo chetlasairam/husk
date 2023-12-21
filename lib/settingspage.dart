@@ -88,6 +88,7 @@ class _SettingPageState extends State<SettingPage> {
         if (data.containsKey("myImage")) {
           setState(() {
             dpImg = data['myImage'];
+            print(dpImg);
           });
         }
       }
